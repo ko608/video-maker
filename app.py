@@ -182,6 +182,42 @@ with tab2:
                     log(f"컷 {no} 실패: {e}")
             log("끝! 아래에서 확인하세요.")
         st.divider()
+
+        # ---- 플로우(무료) 한 번에: 전체 문구 + 한꺼번에 올리기 ----
+        st.markdown("### 🆓 플로우로 한 번에 만들기 (무료)")
+        common = ("세로 9:16, 사실적인 영화 같은 장면, 글자·자막 없이. 평범한 동네 사람 얼굴(연예인·모델·아이돌 같지 않게, "
+                  f"화장 옅게, 자연스러운 피부). 모든 장면에서 같은 인물: {data.get('characters','')}")
+        lines_all = [f"아래 {len(data['cuts'])}개를 순서대로 만들어 줘. 공통: {common}", ""]
+        for c in data["cuts"]:
+            if c["kind"] == "video":
+                lines_all.append(f"{c['no']}번 [영상 4초] {c['visual']} / 대사({c.get('speaker','')}): \"{c['line']}\" "
+                                 "— 이 사람만 말하고 다른 사람은 입을 다문다")
+            else:
+                lines_all.append(f"{c['no']}번 [이미지] {c['visual']}")
+        st.text_area("① 이 문구 전체를 복사 → 플로우 오른쪽 채팅창에 한 번에 붙여 넣기",
+                     "\n".join(lines_all), height=220, key="flow_all")
+        empty = [int(c["no"]) for c in data["cuts"] if not cut_file(p, int(c["no"]))]
+        ups = st.file_uploader(f"② 플로우에서 받은 파일들을 한꺼번에 올리기 — 빈 컷 {empty} 에 "
+                               "그림은 그림 컷, 영상은 대사 컷 순서대로 들어가요 (파일 이름 순)",
+                               type=["png", "jpg", "jpeg", "webp", "mp4", "mov"],
+                               accept_multiple_files=True, key="bulk_up")
+        if ups and st.button("📥 올린 파일들 컷에 넣기", type="primary"):
+            vids = sorted([u for u in ups if Path(u.name).suffix.lower() in (".mp4", ".mov")], key=lambda u: u.name)
+            pics = sorted([u for u in ups if u not in vids], key=lambda u: u.name)
+            done = []
+            for c in data["cuts"]:
+                no = int(c["no"])
+                if cut_file(p, no):
+                    continue
+                pool = vids if c["kind"] == "video" else pics
+                if not pool:
+                    continue
+                u = pool.pop(0)
+                (p / "재료" / f"{no:02d}{Path(u.name).suffix.lower()}").write_bytes(u.getbuffer())
+                done.append(no)
+            st.success(f"컷 {done} 에 넣었어요. 순서가 틀린 컷은 아래에서 지우고 다시 올리세요.")
+            st.rerun()
+        st.divider()
         for c in data["cuts"]:
             no = int(c["no"])
             f = cut_file(p, no)
