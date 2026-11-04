@@ -169,13 +169,21 @@ def make_video(cfg, prompt, out_path, first_frame=None, aspect="9:16", log=print
     if first_frame and Path(first_frame).exists():
         mime = "image/png" if str(first_frame).lower().endswith(".png") else "image/jpeg"
         img = types.Image(image_bytes=Path(first_frame).read_bytes(), mime_type=mime)
-    # 구글 영상 모델 이름이 자주 바뀌어서, 되는 것을 차례로 시도
+    # 1순위: 구글 새 영상 모델 Gemini Omni Flash (Interactions API) — 플로우와 같은 모델
+    errors = []
+    try:
+        return _omni_video(client, cfg, prompt, first_frame, out_path, aspect, log)
+    except Exception as e:
+        msg = str(e)
+        if "exceeded your current quota" in msg or "billing" in msg.lower():
+            raise RuntimeError("대사 영상은 구글 결제(Billing)를 켜야 만들 수 있어요.")
+        errors.append(f"omni: {msg[:120]}")
+    # 예비: 예전 방식(Veo 등)
     models = []
     for m in [cfg.get("veo_model"), "gemini-omni-1.1-flash", "gemini-omni-flash-preview",
               "veo-3.1-fast-generate-preview", "veo-3.1-lite-generate-preview", "veo-3.1-generate-preview"]:
         if m and m not in models:
             models.append(m)
-    errors = []
     for m in models:
         kw = dict(model=m, prompt=prompt,
                   config=types.GenerateVideosConfig(aspect_ratio=aspect,
@@ -207,6 +215,52 @@ def make_video(cfg, prompt, out_path, first_frame=None, aspect="9:16", log=print
         v.video.save(str(out_path))
         return out_path
     raise RuntimeError("이 구글 키로 쓸 수 있는 영상 모델이 없어요 → 플로우로 만들어 올려 주세요. (" + " / ".join(errors)[:300] + ")")
+
+
+def _omni_video(client, cfg, prompt, first_frame, out_path, aspect, log):
+    model = cfg.get("omni_model") or "gemini-omni-1.1-flash"
+    if not hasattr(client, "interactions"):
+        raise RuntimeError("구글 프로그램(google-genai)이 옛 버전이에요. 실행하기.bat으로 다시 켜면 새로 받아요.")
+    text = prompt + f" About {int(cfg.get('video_seconds', 4))} seconds long, single continuous shot."
+    if first_frame and Path(first_frame).exists():
+        mime = "image/png" if str(first_frame).lower().endswith(".png") else "image/jpeg"
+        b64 = base64.b64encode(Path(first_frame).read_bytes()).decode()
+        inp = [{"type": "image", "data": b64, "mime_type": mime},
+               {"type": "text", "text": "Use this image as the first frame. " + text}]
+    else:
+        inp = text
+    log(f"   ({model} 모델로 영상 만드는 중 — 1~3분)")
+    it = client.interactions.create(model=model, input=inp,
+                                    response_format={"type": "video", "aspect_ratio": aspect, "delivery": "uri"})
+    vo = it.output_video
+    if getattr(vo, "data", None):
+        data = vo.data
+        Path(out_path).write_bytes(base64.b64decode(data) if isinstance(data, str) else data)
+        return out_path
+    uri = getattr(vo, "uri", None)
+    if not uri:
+        raise RuntimeError("영상이 만들어지지 않았어요 (안전 필터일 수 있어요).")
+    name = uri.split("/")[-1].split("?")[0]
+    waited = 0
+    while True:
+        st_ = client.files.get(name=f"files/{name}").state.name
+        if st_ == "ACTIVE":
+            break
+        if st_ == "FAILED":
+            raise RuntimeError("영상 만들기 실패 (안전 필터일 수 있어요).")
+        time.sleep(5); waited += 5
+        log(f"   … 영상 마무리 중 ({waited}초)")
+        if waited > 600:
+            raise RuntimeError("영상이 10분 넘게 안 나와서 멈췄어요.")
+    try:
+        client.files.download(file=uri, destination=str(out_path))
+    except TypeError:
+        data = client.files.download(file=uri)
+        Path(out_path).write_bytes(data)
+    if not Path(out_path).exists() or Path(out_path).stat().st_size == 0:
+        data = client.files.download(file=uri)
+        Path(out_path).write_bytes(data)
+    return out_path
 
 
 # ---------------- 5. 나레이션 목소리 ----------------
