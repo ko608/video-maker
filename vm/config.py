@@ -34,7 +34,8 @@ DEFAULTS = {
     "music_volume": 0.35,   # 배경음악 음량 (0~1). 나레이션이 나올 땐 자동으로 더 작아집니다
     "subtitle_size": 76,
     "subtitle_y": 0.55,     # 자막 높이 (0=맨 위, 1=맨 아래). 쇼츠는 화면 중간쯤
-    "video_seconds": 4,     # Veo 대사 영상 길이 (4/6/8)
+    "video_seconds": 4,
+    "image_size": "2K",     # 그림 해상도 (1K/2K/4K) — 높을수록 선명, 비용 조금 더     # Veo 대사 영상 길이 (4/6/8)
 }
 
 def load():

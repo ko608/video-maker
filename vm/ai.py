@@ -135,10 +135,20 @@ def write_script(cfg, channel, analysis="", topic=""):
 def make_image(cfg, prompt, out_path, aspect="9:16"):
     from google.genai import types
     client = _gclient(cfg)
-    r = _with_retry(lambda m: client.models.generate_content(
-        model=m, contents=prompt,
-        config=types.GenerateContentConfig(response_modalities=["IMAGE"],
-                                           image_config=types.ImageConfig(aspect_ratio=aspect))),
+    def call(m):
+        # 고화질(2K)로 먼저 요청 → 모델이 못 하면 기본 크기로
+        for size in (cfg.get("image_size", "2K"), None):
+            ic = types.ImageConfig(aspect_ratio=aspect, image_size=size) if size else types.ImageConfig(aspect_ratio=aspect)
+            try:
+                return client.models.generate_content(
+                    model=m, contents=prompt,
+                    config=types.GenerateContentConfig(response_modalities=["IMAGE"], image_config=ic))
+            except Exception as e:
+                if size and any(k in str(e) for k in ("400", "INVALID_ARGUMENT", "image_size")):
+                    continue
+                raise
+
+    r = _with_retry(call,
         [cfg["gemini_image_model"], "gemini-nano-banana-2.1", "gemini-3.1-flash-image", "gemini-3-pro-image", "gemini-3.1-flash-image-preview"])
     for cand in r.candidates or []:
         for part in cand.content.parts or []:

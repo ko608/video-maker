@@ -176,7 +176,10 @@ def thumbnail(project: Path, lines, photo, cfg):
     if photo and Path(photo).exists() and Path(photo).suffix.lower() in (".png", ".jpg", ".jpeg", ".webp"):
         ph = Image.open(photo).convert("RGB")
         sc = max(W / ph.width, H / ph.height)
-        ph = ph.resize((int(ph.width * sc) + 1, int(ph.height * sc) + 1))
+        ph = ph.resize((int(ph.width * sc) + 1, int(ph.height * sc) + 1), Image.LANCZOS)
+        if sc > 1.2:   # 작은 그림을 키울 땐 살짝 또렷하게
+            from PIL import ImageFilter
+            ph = ph.filter(ImageFilter.UnsharpMask(radius=2, percent=80, threshold=2))
         x = (ph.width - W) // 2
         y = int((ph.height - H) * 0.3)          # 얼굴이 있는 위쪽을 조금 더 살림
         img = ph.crop((x, y, x + W, y + H))
@@ -211,5 +214,5 @@ def thumbnail(project: Path, lines, photo, cfg):
     if L[2]:
         ctext(y, L[2], 95, "white", 12)
     out = project / "썸네일.jpg"
-    img.save(out, quality=92)
+    img.save(out, quality=95, subsampling=0)
     return out

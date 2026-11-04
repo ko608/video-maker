@@ -253,7 +253,15 @@ with tab3:
                             audio = wav
                     cuts.append(dict(media=media, audio=audio, text=c["line"] or c["narration"]))
                 final = assemble.assemble(p, cuts, cfg, music=music, log=log)
-                photo = next((cut_file(p, int(c["no"])) for c in data["cuts"] if c["kind"] == "image"), None)
+                # 썸네일 사진: 재료 폴더의 그림 중 가장 해상도 높은 원본
+                from PIL import Image as _I
+                pics = [x for x in (p / "재료").iterdir() if x.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")]
+                def _px(x):
+                    try:
+                        w_, h_ = _I.open(x).size; return w_ * h_
+                    except Exception:
+                        return 0
+                photo = max(pics, key=_px) if pics else None
                 assemble.thumbnail(p, data.get("thumbnail", []), photo, cfg)
                 info = (f"[제목]\n{data.get('title','')}\n\n[설명]\n{data.get('description','')}\n\n"
                         f"[태그]\n{data.get('tags','')}\n\n[고정 댓글]\n{data.get('pinned_comment','')}\n\n"
