@@ -110,7 +110,7 @@ with tab1:
         st.subheader("✍️ 대본 (칸을 눌러 바로 고칠 수 있어요)")
         cuts = st.data_editor(d["cuts"], num_rows="fixed", width="stretch",
                               column_config={"no": "컷", "kind": "종류(video/image)", "line": "대사",
-                                             "speaker": "누가", "narration": "나레이션", "visual": "장면 묘사(영어)"})
+                                             "speaker": "누가", "speaker_en": "말하는 사람(영어)", "narration": "나레이션", "visual": "장면 묘사(영어)"})
         a, b = st.columns(2)
         title = a.selectbox("제목", d.get("title_options", ["제목"]))
         tags = b.text_input("태그 (한 줄)", d.get("tags", ""))
@@ -150,7 +150,7 @@ with tab2:
                 no = int(c["no"])
                 if cut_file(p, no):
                     continue
-                base = (f"{style}. Characters: {data.get('characters','')}. Scene: {c['visual']}. "
+                base = (f"Scene {no}: {c['visual']}. Style: {style}. Characters: {data.get('characters','')}. "
                         "Ordinary everyday Korean people with average, natural faces, light natural makeup, "
                         "realistic skin texture, not celebrities, not models, not idols")
                 try:
@@ -161,12 +161,19 @@ with tab2:
                         still = p / "재료" / f"{no:02d}_첫장면.png"
                         if not still.exists():
                             log(f"컷 {no}: 첫 장면 그림 만드는 중 (플로우 시작 이미지용)")
-                            ai.make_image(cfg, base, still)
+                            ai.make_image(cfg, base + f". The speaker ({c.get('speaker_en') or c.get('speaker','')}) is in the foreground, "
+                                          "face clearly visible, about to speak.", still)
                         if not mode_video:
                             continue
                         log(f"컷 {no}: 대사 영상 만드는 중 (1~3분)")
-                        vprompt = (f"{base}. The {c.get('speaker','')} says in Korean: \"{c['line']}\". "
-                                   "Natural lip sync, Korean speech audio only, no background music, no subtitles.")
+                        # 대사·말하는 사람을 맨 앞에 못 박기 (컷마다 대사가 같아지거나 엉뚱한 사람이 말하는 것 방지)
+                        vprompt = (f"DIALOGUE — the ONLY words spoken in this clip, in Korean, exactly once, word for word: "
+                                   f"\"{c['line']}\". "
+                                   f"SPEAKER: {c.get('speaker_en') or c.get('speaker','')}. Only this person moves their lips "
+                                   "and speaks; every other person stays completely silent with mouth closed. "
+                                   "Do not add any other lines. "
+                                   f"Scene {no}: {c['visual']}. Characters: {data.get('characters','')}. {style}. "
+                                   "Natural lip sync, no background music, no subtitles, no text on screen.")
                         ai.make_video(cfg, vprompt, p / "재료" / f"{no:02d}.mp4", first_frame=still, log=log)
                 except Exception as e:
                     log(f"컷 {no} 실패: {e}")
@@ -178,10 +185,12 @@ with tab2:
             l, m, r = st.columns([2, 3, 2])
             l.markdown(f"### 컷 {no} · {'🎥 대사 영상' if c['kind']=='video' else '🖼️ 이미지+나레이션'}")
             l.write(c["line"] or c["narration"])
-            flow = (f"세로 9:16, 사실적인 영화 같은 장면, 글자·자막 없이. "
-                    f"평범한 동네 사람 얼굴(연예인·모델·아이돌 같지 않게, 화장 옅게, 자연스러운 피부). 등장인물: {data.get('characters','')}. "
-                    f"장면: {c['visual']}" + (f". 한국어 대사: \"{c['line']}\" (4초)" if c["kind"] == "video" else ""))
-            m.text_area("플로우에 넣을 문구 (복사)", flow, height=110, key=f"flow{no}")
+            flow = (f"[컷 {no} 장면] {c['visual']}"
+                    + (f"\n[대사] {c.get('speaker','')}: \"{c['line']}\" (한국어, 4초)" if c["kind"] == "video" else "")
+                    + "\n[공통] 세로 9:16, 사실적인 영화 같은 장면, 글자·자막 없이. "
+                      "평범한 동네 사람 얼굴(연예인·모델·아이돌 같지 않게, 화장 옅게, 자연스러운 피부). "
+                    + f"등장인물: {data.get('characters','')}")
+            m.text_area("플로우에 넣을 문구 (복사) — 맨 위가 이 컷만의 장면", flow, height=170, key=f"flow{no}")
             up = m.file_uploader("플로우에서 받은 파일 올리기", type=["png", "jpg", "jpeg", "webp", "mp4", "mov"], key=f"up{no}")
             if up is not None:
                 for old in (p / "재료").glob(f"{no:02d}.*"):
