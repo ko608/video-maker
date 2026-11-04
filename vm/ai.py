@@ -183,14 +183,28 @@ def make_video(cfg, prompt, out_path, first_frame=None, aspect="9:16", log=print
 def make_tts(cfg, text, out_wav):
     from google.genai import types
     client = _gclient(cfg)
-    r = _with_retry(lambda m: client.models.generate_content(
-        model=m,
-        contents=f"{cfg.get('tts_style','')}:\n{text}",
-        config=types.GenerateContentConfig(
-            response_modalities=["AUDIO"],
-            speech_config=types.SpeechConfig(voice_config=types.VoiceConfig(
-                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=cfg.get("tts_voice", "Kore")))))),
-        [cfg["gemini_tts_model"], "gemini-3.8-flash-tts", "gemini-3.1-flash-tts-preview", "gemini-3.8-flash-lite-tts"])
+    voice = types.SpeechConfig(voice_config=types.VoiceConfig(
+        prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=cfg.get("tts_voice", "Kore"))))
+    style = (cfg.get("tts_style") or "").strip()
+
+    def call(m):
+        # 말투 지시는 '읽을 글'과 분리해서 보냄 → 지시문을 소리 내어 읽지 않게
+        if style:
+            try:
+                return client.models.generate_content(
+                    model=m, contents=text,
+                    config=types.GenerateContentConfig(
+                        system_instruction=style + " 아래 글만 그대로 읽고, 이 지시문은 절대 소리 내어 읽지 마세요.",
+                        response_modalities=["AUDIO"], speech_config=voice))
+            except Exception as e:
+                if not any(k in str(e) for k in ("400", "INVALID_ARGUMENT")):
+                    raise
+        return client.models.generate_content(
+            model=m, contents=text,
+            config=types.GenerateContentConfig(response_modalities=["AUDIO"], speech_config=voice))
+
+    r = _with_retry(call, [cfg["gemini_tts_model"], "gemini-3.8-flash-tts", "gemini-3.1-flash-tts-preview",
+                           "gemini-3.8-flash-lite-tts"])
     data = r.candidates[0].content.parts[0].inline_data.data
     if isinstance(data, str):
         data = base64.b64decode(data)
