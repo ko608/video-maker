@@ -28,6 +28,30 @@ def _json_from(text):
     return json.loads(m.group(0))
 
 
+FALLBACK_TEXT = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash-preview"]
+
+
+def _with_retry(fn, models):
+    """구글이 '사용자 많음(503)'일 때 잠깐 쉬었다 다시, 그래도 안 되면 다른 모델로."""
+    last = None
+    seen = []
+    for m in models:
+        if not m or m in seen:
+            continue
+        seen.append(m)
+        for wait in (0, 5, 15):
+            if wait:
+                time.sleep(wait)
+            try:
+                return fn(m)
+            except Exception as e:
+                last = e
+                msg = str(e)
+                if not any(k in msg for k in ("503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "overloaded", "500")):
+                    raise
+    raise RuntimeError("구글 서버가 지금 많이 바빠요. 몇 분 뒤 다시 눌러 주세요. (" + str(last)[:150] + ")")
+
+
 # ---------------- 1. 잘 되는 영상 분석 ----------------
 ANALYZE_PROMPT = """당신은 한국 유튜브 쇼츠·롱폼 성공 분석가입니다. 이 영상을 처음부터 끝까지 보고 듣고, 아래 형식의 한국어 보고서를 써 주세요.
 60대도 읽기 쉬운 말로, 시간은 "0:07"처럼 표시하세요.
@@ -50,7 +74,8 @@ def analyze_youtube(cfg, url, extra=""):
         types.Part(file_data=types.FileData(file_uri=url.strip())),
         types.Part(text=ANALYZE_PROMPT + (f"\n참고 메모: {extra}" if extra else "")),
     ])
-    r = client.models.generate_content(model=cfg["gemini_text_model"], contents=contents)
+    r = _with_retry(lambda m: client.models.generate_content(model=m, contents=contents),
+                    [cfg["gemini_text_model"]] + FALLBACK_TEXT)
     return (r.text or "").strip()
 
 
@@ -106,10 +131,11 @@ def write_script(cfg, channel, analysis="", topic=""):
 def make_image(cfg, prompt, out_path, aspect="9:16"):
     from google.genai import types
     client = _gclient(cfg)
-    r = client.models.generate_content(
-        model=cfg["gemini_image_model"], contents=prompt,
+    r = _with_retry(lambda m: client.models.generate_content(
+        model=m, contents=prompt,
         config=types.GenerateContentConfig(response_modalities=["IMAGE"],
-                                           image_config=types.ImageConfig(aspect_ratio=aspect)))
+                                           image_config=types.ImageConfig(aspect_ratio=aspect))),
+        [cfg["gemini_image_model"], "gemini-2.5-flash-image"])
     for cand in r.candidates or []:
         for part in cand.content.parts or []:
             if getattr(part, "inline_data", None) and part.inline_data.data:
@@ -153,13 +179,14 @@ def make_video(cfg, prompt, out_path, first_frame=None, aspect="9:16", log=print
 def make_tts(cfg, text, out_wav):
     from google.genai import types
     client = _gclient(cfg)
-    r = client.models.generate_content(
-        model=cfg["gemini_tts_model"],
+    r = _with_retry(lambda m: client.models.generate_content(
+        model=m,
         contents=f"{cfg.get('tts_style','')}:\n{text}",
         config=types.GenerateContentConfig(
             response_modalities=["AUDIO"],
             speech_config=types.SpeechConfig(voice_config=types.VoiceConfig(
-                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=cfg.get("tts_voice", "Kore"))))))
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=cfg.get("tts_voice", "Kore")))))),
+        [cfg["gemini_tts_model"], "gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts"])
     data = r.candidates[0].content.parts[0].inline_data.data
     if isinstance(data, str):
         data = base64.b64decode(data)
