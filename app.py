@@ -219,6 +219,13 @@ with tab3:
         missing = [int(c["no"]) for c in data["cuts"] if not cut_file(p, int(c["no"]))]
         if missing:
             st.warning(f"재료가 없는 컷: {missing} — ② 탭에서 채워 주세요.")
+        mup = st.file_uploader("🎵 배경음악 파일 올리기 (mp3·wav·m4a — 한 번 올리면 music 폴더에 계속 남아요)",
+                               type=["mp3", "wav", "m4a"], key="music_up")
+        if mup is not None:
+            dest = config.MUSIC / mup.name
+            if not dest.exists():
+                dest.write_bytes(mup.getbuffer())
+                st.success(f"음악을 넣었어요: {mup.name} — 아래 목록에서 고르세요.")
         musics = [None] + sorted([m for m in config.MUSIC.iterdir() if m.suffix.lower() in (".mp3", ".wav", ".m4a")])
         music = st.selectbox("배경음악 (music 폴더의 곡)", musics, format_func=lambda m: "없음" if m is None else m.name)
         own_voice = st.checkbox("나레이션을 내가 녹음/다른 곳에서 만든 파일로 쓰기 (재료 폴더에 02_나레이션.mp3 처럼)")
