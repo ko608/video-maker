@@ -24,9 +24,9 @@ DEFAULTS = {
     "anthropic_api_key": "",
     # 모델 이름 — 바뀌면 설정 화면에서 고칠 수 있습니다
     "claude_model": "claude-sonnet-5",
-    "gemini_text_model": "gemini-2.5-flash",          # 유튜브 영상 분석
-    "gemini_image_model": "gemini-2.5-flash-image",   # 나노바나나 (이미지)
-    "gemini_tts_model": "gemini-2.5-flash-preview-tts",  # 나레이션 목소리
+    "gemini_text_model": "gemini-3.8-flash",          # 유튜브 영상 분석
+    "gemini_image_model": "gemini-nano-banana-2.1",   # 나노바나나 (이미지)
+    "gemini_tts_model": "gemini-3.8-flash-tts",  # 나레이션 목소리
     "veo_model": "veo-3.1-fast-generate-preview",      # 대사 영상 (Veo)
     "tts_voice": "Kore",
     "tts_style": "차분하지만 긴장감 있는 40대 한국 여성 내레이터처럼, 또박또박 자연스럽게 읽어 주세요",
@@ -44,6 +44,10 @@ def load():
             data.update(json.loads(SETTINGS.read_text(encoding="utf-8")))
         except Exception:
             pass
+    # 구글이 새 사용자에게 막은 옛 모델(2.5 등)은 자동으로 새 기본값으로 바꿈
+    for k in ("gemini_text_model", "gemini_image_model", "gemini_tts_model"):
+        if str(data.get(k, "")).startswith("gemini-2.5") or data.get(k) == "gemini-flash-latest":
+            data[k] = DEFAULTS[k]
     return data
 
 def save(data):

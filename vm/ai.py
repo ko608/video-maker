@@ -28,7 +28,7 @@ def _json_from(text):
     return json.loads(m.group(0))
 
 
-FALLBACK_TEXT = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-pro-latest"]
+FALLBACK_TEXT = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-pro-latest", "gemini-3.1-pro-preview"]
 
 
 def _with_retry(fn, models):
@@ -47,9 +47,11 @@ def _with_retry(fn, models):
             except Exception as e:
                 last = e
                 msg = str(e)
+                if any(k in msg for k in ("404", "NOT_FOUND", "no longer available", "not supported")):
+                    break  # 이 모델은 못 씀 → 바로 다음 모델로
                 if not any(k in msg for k in ("503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "overloaded", "500")):
                     raise
-    raise RuntimeError("구글 서버가 지금 많이 바빠요. 몇 분 뒤 다시 눌러 주세요. (" + str(last)[:150] + ")")
+    raise RuntimeError("구글 모델을 쓸 수 없어요(바쁘거나 막힘). 몇 분 뒤 다시 눌러 주세요. 계속되면 이 화면을 Claude에게 보내 주세요. (" + str(last)[:150] + ")")
 
 
 # ---------------- 1. 잘 되는 영상 분석 ----------------
@@ -135,7 +137,7 @@ def make_image(cfg, prompt, out_path, aspect="9:16"):
         model=m, contents=prompt,
         config=types.GenerateContentConfig(response_modalities=["IMAGE"],
                                            image_config=types.ImageConfig(aspect_ratio=aspect))),
-        [cfg["gemini_image_model"], "gemini-2.5-flash-image", "gemini-3.1-flash-image", "gemini-nano-banana-2.1", "gemini-3-pro-image"])
+        [cfg["gemini_image_model"], "gemini-nano-banana-2.1", "gemini-3.1-flash-image", "gemini-3-pro-image", "gemini-3.1-flash-image-preview"])
     for cand in r.candidates or []:
         for part in cand.content.parts or []:
             if getattr(part, "inline_data", None) and part.inline_data.data:
@@ -186,7 +188,7 @@ def make_tts(cfg, text, out_wav):
             response_modalities=["AUDIO"],
             speech_config=types.SpeechConfig(voice_config=types.VoiceConfig(
                 prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=cfg.get("tts_voice", "Kore")))))),
-        [cfg["gemini_tts_model"], "gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts"])
+        [cfg["gemini_tts_model"], "gemini-3.8-flash-tts", "gemini-3.1-flash-tts-preview", "gemini-3.8-flash-lite-tts"])
     data = r.candidates[0].content.parts[0].inline_data.data
     if isinstance(data, str):
         data = base64.b64decode(data)
