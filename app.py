@@ -142,8 +142,9 @@ with tab2:
         st.markdown("**방법 A — 자동(API, 유료)**: 버튼 하나로 이미지·대사 영상을 만듭니다.  \n"
                     "**방법 B — 플로우(무료)**: 아래 문구를 플로우에 넣어 만든 뒤, 컷마다 파일을 올리세요.")
         colA, colB = st.columns(2)
-        mode_video = colA.checkbox("대사 영상도 자동으로 (Veo — 구글 키에 Veo가 있을 때만)", value=False)
-        colA.caption("체크 안 하면: 대사 컷은 '첫 장면 그림'만 만들어 둡니다 → 플로우에 그 그림을 시작 이미지로 넣고 문구를 붙여 영상 만들기")
+        mode_video = colA.checkbox("대사 영상도 자동으로 (구글 Omni — 유료, 1컷 수백 원)", value=False)
+        make_still = colA.checkbox("대사 컷 '첫 장면 그림'도 만들기 (플로우 시작 이미지용 — 1장 수십~백여 원)", value=False)
+        colA.caption("둘 다 끄면: 그림 컷(2·4·6)만 만들어요. 대사 컷은 플로우에서 만들어 올리세요 (가장 저렴)")
         if colB.button("⚡ 빠진 재료 전부 자동으로 만들기", type="primary", width="stretch"):
             log = Log()
             for c in data["cuts"]:
@@ -158,6 +159,8 @@ with tab2:
                         log(f"컷 {no}: 이미지 만드는 중")
                         ai.make_image(cfg, base, p / "재료" / f"{no:02d}.png")
                     else:
+                        if not (mode_video or make_still):
+                            continue
                         still = p / "재료" / f"{no:02d}_첫장면.png"
                         if not still.exists():
                             log(f"컷 {no}: 첫 장면 그림 만드는 중 (플로우 시작 이미지용)")

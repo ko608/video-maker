@@ -150,7 +150,7 @@ def make_image(cfg, prompt, out_path, aspect="9:16"):
                 raise
 
     r = _with_retry(call,
-        [cfg["gemini_image_model"], "gemini-nano-banana-2.1", "gemini-3.1-flash-image", "gemini-3-pro-image", "gemini-3.1-flash-image-preview"])
+        [cfg["gemini_image_model"], "gemini-nano-banana-2.1", "gemini-3.1-flash-image", "gemini-3.1-flash-image-preview"])
     for cand in r.candidates or []:
         for part in cand.content.parts or []:
             if getattr(part, "inline_data", None) and part.inline_data.data:
