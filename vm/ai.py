@@ -47,6 +47,8 @@ def _with_retry(fn, models):
             except Exception as e:
                 last = e
                 msg = str(e)
+                if "exceeded your current quota" in msg or "billing" in msg:
+                    raise RuntimeError("구글 무료 한도로는 이 기능(그림·목소리)을 쓸 수 없어요. AI Studio에서 결제(Billing)를 켜거나, 플로우에서 만들어 올려 주세요.")
                 if any(k in msg for k in ("404", "NOT_FOUND", "no longer available", "not supported")):
                     break  # 이 모델은 못 씀 → 바로 다음 모델로
                 if not any(k in msg for k in ("503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "overloaded", "500")):
