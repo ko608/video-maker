@@ -168,34 +168,48 @@ def assemble(project: Path, cuts, cfg, music=None, log=print):
     return final
 
 
-# ---------------- 썸네일 (밝은 배경 + 장면 사진) ----------------
+# ---------------- 썸네일 (사진 꽉 차게 + 큰 글씨 겹치기) ----------------
 def thumbnail(project: Path, lines, photo, cfg):
-    import math
     font_path = cfg["font_path"]
-    f = lambda s: ImageFont.truetype(font_path, s)
-    img = Image.new("RGB", (W, H))
-    d = ImageDraw.Draw(img)
-    for y in range(H):
-        t = y / H
-        d.line([(0, y), (W, y)], fill=(255, int(226 - 20 * t), int(120 + 100 * t)))
+    f = lambda sz: ImageFont.truetype(font_path, sz)
+    img = None
     if photo and Path(photo).exists() and Path(photo).suffix.lower() in (".png", ".jpg", ".jpeg", ".webp"):
         ph = Image.open(photo).convert("RGB")
-        ph = ph.resize((W, int(ph.height * W / ph.width)))
-        top = H - min(ph.height, 1000)
-        img.paste(ph.crop((0, 0, W, min(ph.height, 1000))), (0, top))
-        d = ImageDraw.Draw(img)
-        d.rectangle([0, top - 8, W, top], fill=(220, 30, 30))
+        sc = max(W / ph.width, H / ph.height)
+        ph = ph.resize((int(ph.width * sc) + 1, int(ph.height * sc) + 1))
+        x = (ph.width - W) // 2
+        y = int((ph.height - H) * 0.3)          # 얼굴이 있는 위쪽을 조금 더 살림
+        img = ph.crop((x, y, x + W, y + H))
+    if img is None:                              # 사진이 없으면 밝은 바탕
+        img = Image.new("RGB", (W, H))
+        d0 = ImageDraw.Draw(img)
+        for yy in range(H):
+            t = yy / H
+            d0.line([(0, yy), (W, yy)], fill=(255, int(226 - 20 * t), int(120 + 100 * t)))
+    # 글씨 뒤만 살짝 어둡게 (위쪽 → 투명) — 사진은 밝게 살리고 글씨는 또렷하게
+    shade = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ds = ImageDraw.Draw(shade)
+    for yy in range(0, 1000):
+        a = int(120 * (1 - yy / 1000) ** 1.5)
+        ds.line([(0, yy), (W, yy)], fill=(0, 0, 0, a))
+    img = Image.alpha_composite(img.convert("RGBA"), shade).convert("RGB")
+    d = ImageDraw.Draw(img)
+
     def ctext(y, s, size, fill, stroke):
-        while size > 40 and d.textlength(s, font=f(size)) > W - 70:
+        while size > 40 and d.textlength(s, font=f(size)) > W - 60:
             size -= 4
         w = d.textlength(s, font=f(size))
-        sf = "white" if fill == (225, 25, 25) else "black"
-        d.text(((W - w) / 2, y), s, font=f(size), fill=fill, stroke_width=stroke, stroke_fill=sf)
+        d.text(((W - w) / 2, y), s, font=f(size), fill=fill, stroke_width=stroke, stroke_fill="black")
+        return size
+
     L = (list(lines) + ["", "", ""])[:3]
-    # 밝은 배경에서도 잘 보이게: 1·3줄은 흰 글씨+검은 테두리, 2줄(핵심)은 크고 빨간 글씨+흰 테두리
-    if L[0]: ctext(200, L[0], 120, "white", 14)
-    if L[1]: ctext(390, L[1], 170, (225, 25, 25), 16)
-    if L[2]: ctext(640, L[2], 100, "white", 12)
+    y = 170
+    if L[0]:
+        sz = ctext(y, L[0], 115, "white", 13); y += sz + 45
+    if L[1]:
+        sz = ctext(y, L[1], 165, (255, 230, 0), 18); y += sz + 50
+    if L[2]:
+        ctext(y, L[2], 95, "white", 12)
     out = project / "썸네일.jpg"
     img.save(out, quality=92)
     return out
