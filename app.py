@@ -150,7 +150,9 @@ with tab2:
                 no = int(c["no"])
                 if cut_file(p, no):
                     continue
-                base = f"{style}. Characters: {data.get('characters','')}. Scene: {c['visual']}"
+                base = (f"{style}. Characters: {data.get('characters','')}. Scene: {c['visual']}. "
+                        "Ordinary everyday Korean people with average, natural faces, light natural makeup, "
+                        "realistic skin texture, not celebrities, not models, not idols")
                 try:
                     if c["kind"] == "image":
                         log(f"컷 {no}: 이미지 만드는 중")
@@ -176,7 +178,8 @@ with tab2:
             l, m, r = st.columns([2, 3, 2])
             l.markdown(f"### 컷 {no} · {'🎥 대사 영상' if c['kind']=='video' else '🖼️ 이미지+나레이션'}")
             l.write(c["line"] or c["narration"])
-            flow = (f"세로 9:16, 사실적인 영화 같은 장면, 글자·자막 없이. 등장인물: {data.get('characters','')}. "
+            flow = (f"세로 9:16, 사실적인 영화 같은 장면, 글자·자막 없이. "
+                    f"평범한 동네 사람 얼굴(연예인·모델·아이돌 같지 않게, 화장 옅게, 자연스러운 피부). 등장인물: {data.get('characters','')}. "
                     f"장면: {c['visual']}" + (f". 한국어 대사: \"{c['line']}\" (4초)" if c["kind"] == "video" else ""))
             m.text_area("플로우에 넣을 문구 (복사)", flow, height=110, key=f"flow{no}")
             up = m.file_uploader("플로우에서 받은 파일 올리기", type=["png", "jpg", "jpeg", "webp", "mp4", "mov"], key=f"up{no}")
