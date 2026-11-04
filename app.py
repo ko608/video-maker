@@ -269,7 +269,9 @@ with tab4:
         new["subtitle_y"] = st.slider("자막 높이 (0.5=정중앙)", 0.3, 0.8, float(cfg["subtitle_y"]))
         new["music_volume"] = st.slider("배경음악 음량", 0.05, 1.0, float(cfg["music_volume"]))
     if st.button("💾 설정 저장", type="primary"):
-        config.save(new); st.success("저장했어요."); st.rerun()
+        config.save(new); st.session_state["saved_msg"] = True; st.rerun()
+    if st.session_state.pop("saved_msg", False):
+        st.success("✅ 저장했어요. (키는 이 컴퓨터에만 저장됩니다)")
     if st.button("🔌 구글 연결 시험 (쓸 수 있는 모델 목록 보기)"):
         try:
             ms = ai.list_google_models(new)
