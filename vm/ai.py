@@ -28,7 +28,7 @@ def _json_from(text):
     return json.loads(m.group(0))
 
 
-FALLBACK_TEXT = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash-preview"]
+FALLBACK_TEXT = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-pro-latest"]
 
 
 def _with_retry(fn, models):
@@ -135,7 +135,7 @@ def make_image(cfg, prompt, out_path, aspect="9:16"):
         model=m, contents=prompt,
         config=types.GenerateContentConfig(response_modalities=["IMAGE"],
                                            image_config=types.ImageConfig(aspect_ratio=aspect))),
-        [cfg["gemini_image_model"], "gemini-2.5-flash-image"])
+        [cfg["gemini_image_model"], "gemini-2.5-flash-image", "gemini-3.1-flash-image", "gemini-nano-banana-2.1", "gemini-3-pro-image"])
     for cand in r.candidates or []:
         for part in cand.content.parts or []:
             if getattr(part, "inline_data", None) and part.inline_data.data:
