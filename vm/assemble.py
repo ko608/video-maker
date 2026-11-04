@@ -189,11 +189,13 @@ def thumbnail(project: Path, lines, photo, cfg):
         while size > 40 and d.textlength(s, font=f(size)) > W - 70:
             size -= 4
         w = d.textlength(s, font=f(size))
-        d.text(((W - w) / 2, y), s, font=f(size), fill=fill, stroke_width=stroke, stroke_fill="black")
+        sf = "white" if fill == (225, 25, 25) else "black"
+        d.text(((W - w) / 2, y), s, font=f(size), fill=fill, stroke_width=stroke, stroke_fill=sf)
     L = (list(lines) + ["", "", ""])[:3]
-    if L[0]: ctext(180, L[0], 96, "white", 12)
-    if L[1]: ctext(330, L[1], 136, (255, 235, 0), 14)
-    if L[2]: ctext(530, L[2], 78, "white", 10)
+    # 밝은 배경에서도 잘 보이게: 1·3줄은 흰 글씨+검은 테두리, 2줄(핵심)은 크고 빨간 글씨+흰 테두리
+    if L[0]: ctext(200, L[0], 120, "white", 14)
+    if L[1]: ctext(390, L[1], 170, (225, 25, 25), 16)
+    if L[2]: ctext(640, L[2], 100, "white", 12)
     out = project / "썸네일.jpg"
     img.save(out, quality=92)
     return out
