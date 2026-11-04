@@ -165,28 +165,48 @@ def make_image(cfg, prompt, out_path, aspect="9:16"):
 def make_video(cfg, prompt, out_path, first_frame=None, aspect="9:16", log=print):
     from google.genai import types
     client = _gclient(cfg)
-    kw = dict(model=cfg["veo_model"], prompt=prompt,
-              config=types.GenerateVideosConfig(aspect_ratio=aspect,
-                                                duration_seconds=int(cfg.get("video_seconds", 4)),
-                                                number_of_videos=1))
+    img = None
     if first_frame and Path(first_frame).exists():
         mime = "image/png" if str(first_frame).lower().endswith(".png") else "image/jpeg"
-        kw["image"] = types.Image(image_bytes=Path(first_frame).read_bytes(), mime_type=mime)
-    op = client.models.generate_videos(**kw)
-    waited = 0
-    while not op.done:
-        time.sleep(8); waited += 8
-        log(f"   … 영상 만드는 중 ({waited}초)")
-        op = client.operations.get(op)
-        if waited > 600:
-            raise RuntimeError("영상이 10분 넘게 안 나와서 멈췄어요.")
-    vids = getattr(op.response, "generated_videos", None) or []
-    if not vids:
-        raise RuntimeError("영상이 만들어지지 않았어요 (안전 필터일 수 있어요).")
-    v = vids[0]
-    client.files.download(file=v.video)
-    v.video.save(str(out_path))
-    return out_path
+        img = types.Image(image_bytes=Path(first_frame).read_bytes(), mime_type=mime)
+    # 구글 영상 모델 이름이 자주 바뀌어서, 되는 것을 차례로 시도
+    models = []
+    for m in [cfg.get("veo_model"), "gemini-omni-1.1-flash", "gemini-omni-flash-preview",
+              "veo-3.1-fast-generate-preview", "veo-3.1-lite-generate-preview", "veo-3.1-generate-preview"]:
+        if m and m not in models:
+            models.append(m)
+    errors = []
+    for m in models:
+        kw = dict(model=m, prompt=prompt,
+                  config=types.GenerateVideosConfig(aspect_ratio=aspect,
+                                                    duration_seconds=int(cfg.get("video_seconds", 4)),
+                                                    number_of_videos=1))
+        if img is not None:
+            kw["image"] = img
+        try:
+            op = client.models.generate_videos(**kw)
+        except Exception as e:
+            msg = str(e)
+            if "exceeded your current quota" in msg or "billing" in msg.lower():
+                raise RuntimeError("대사 영상은 구글 결제(Billing)를 켜야 만들 수 있어요.")
+            errors.append(f"{m}: {msg[:80]}")
+            continue
+        log(f"   ({m} 모델로 만드는 중)")
+        waited = 0
+        while not op.done:
+            time.sleep(8); waited += 8
+            log(f"   … 영상 만드는 중 ({waited}초)")
+            op = client.operations.get(op)
+            if waited > 600:
+                raise RuntimeError("영상이 10분 넘게 안 나와서 멈췄어요.")
+        vids = getattr(op.response, "generated_videos", None) or []
+        if not vids:
+            raise RuntimeError("영상이 만들어지지 않았어요 (안전 필터일 수 있어요). 장면 묘사를 바꿔 보세요.")
+        v = vids[0]
+        client.files.download(file=v.video)
+        v.video.save(str(out_path))
+        return out_path
+    raise RuntimeError("이 구글 키로 쓸 수 있는 영상 모델이 없어요 → 플로우로 만들어 올려 주세요. (" + " / ".join(errors)[:300] + ")")
 
 
 # ---------------- 5. 나레이션 목소리 ----------------

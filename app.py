@@ -306,6 +306,6 @@ with tab4:
         try:
             ms = ai.list_google_models(new)
             st.success(f"연결 성공! 모델 {len(ms)}개")
-            st.code("\n".join(m for m in ms if any(k in m for k in ["gemini", "veo", "imagen", "tts"])))
+            st.code("\n".join(m for m in ms if any(k in m for k in ["gemini", "veo", "imagen", "tts", "omni"])))
         except Exception as e:
             st.error(f"연결 실패: {e}")
