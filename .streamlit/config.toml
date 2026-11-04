@@ -1,0 +1,9 @@
+[client]
+toolbarMode = "minimal"
+[server]
+maxUploadSize = 500
+[browser]
+gatherUsageStats = false
+[theme]
+base = "light"
+primaryColor = "#C8412F"

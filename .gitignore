@@ -1,0 +1,6 @@
+settings.json
+projects/
+music/*
+!music/README.txt
+__pycache__/
+*.pyc
