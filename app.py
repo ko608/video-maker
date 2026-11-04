@@ -245,7 +245,7 @@ with tab3:
                             assemble.run(["-i", str(mine[0]), "-ar", "24000", "-ac", "1", str(wav)])
                             audio = wav
                         else:
-                            wav = p / "work" / f"voice_{no:02d}.wav"
+                            wav = p / "work" / f"voice2_{no:02d}.wav"
                             (p / "work").mkdir(exist_ok=True)
                             if not wav.exists():
                                 log(f"컷 {no}: 나레이션 목소리 만드는 중")

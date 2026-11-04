@@ -205,11 +205,22 @@ def make_tts(cfg, text, out_wav):
 
     r = _with_retry(call, [cfg["gemini_tts_model"], "gemini-3.8-flash-tts", "gemini-3.1-flash-tts-preview",
                            "gemini-3.8-flash-lite-tts"])
-    data = r.candidates[0].content.parts[0].inline_data.data
+    part = r.candidates[0].content.parts[0].inline_data
+    data = part.data
     if isinstance(data, str):
         data = base64.b64decode(data)
+    mime = (getattr(part, "mime_type", "") or "").lower()
+    rate = 24000
+    m_rate = re.search(r"rate=(\d+)", mime)
+    if m_rate:
+        rate = int(m_rate.group(1))
+    if data[:4] == b"RIFF":           # 이미 wav 파일로 온 경우
+        Path(out_wav).write_bytes(data)
+        return out_wav
+    if len(data) % 2:                 # 끝에 남는 반쪽 조각(잡음 원인) 버리기
+        data = data[:-1]
     with wave.open(str(out_wav), "wb") as w:
-        w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(data)
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate); w.writeframes(data)
     return out_wav
 
 

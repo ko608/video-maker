@@ -112,13 +112,17 @@ def build_segment(work: Path, idx, cut, cfg, log=print):
     # 오디오 입력
     if audio:
         args += ["-i", str(audio)]; a_idx = n_in; n_in += 1
-        audio_src = f"[{a_idx}:a]aresample=44100,apad[a0]"
+        audio_src = (f"[{a_idx}:a]aresample=44100,"
+                     "areverse,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.05,areverse,"
+                     "afade=t=in:d=0.03,apad[a0x]")
     elif is_video and media_info(media)[1]:
-        audio_src = "[0:a]aresample=44100,apad[a0]"
+        audio_src = "[0:a]aresample=44100,apad[a0x]"
     else:
         args += ["-f", "lavfi", "-t", f"{dur:.2f}", "-i", "anullsrc=r=44100:cl=stereo"]; a_idx = n_in; n_in += 1
-        audio_src = f"[{a_idx}:a]anull[a0]"
+        audio_src = f"[{a_idx}:a]anull[a0x]"
     filt.append(audio_src)
+    # 장면 끝 0.25초 부드럽게 줄이기 → 컷 이음새 '딱'·'지직' 잡음 없애기
+    filt.append(f"[a0x]atrim=0:{dur:.2f},afade=t=out:st={max(0, dur-0.25):.2f}:d=0.25[a0]")
     # 자막 겹치기
     last = "v0"
     for i, (png, a, b) in enumerate(subs):
