@@ -1,6 +1,6 @@
 {
   "id": "moni_market_shorts",
-  "name": "모니마켓 · 약식동원 먹거리 반전 쇼츠 (약 55초)",
+  "name": "밥상 너머 이야기 · 약식동원 먹거리 반전 쇼츠 (약 55초)",
   "format": "shorts",
   "cuts": 6,
   "rules": [
@@ -11,13 +11,13 @@
     "소재는 약식동원 — 평소 먹는 음식이면서 옛날부터 한약재로도 쓰인 재료(우엉·오디·연근·헛개나무·대추·울금 등).",
     "4컷에서 반전: 무시당하던 그 재료가 옛날부터 한약재로 쓰였다는 사실·역사 이야기가 드러나며 오해가 풀린다.",
     "효능은 '옛날부터 ~로 쓰였다', '~에 좋다고 알려져 있다' 수준으로만 쓰고, 병을 고친다·치료한다는 단정 표현 금지.",
-    "6컷 나레이션 마지막 문장은 '제철 먹거리 이야기, 모니마켓에서 또 만나요.' 형식.",
+    "6컷 나레이션 마지막 문장은 '밥상 너머 이야기에서 또 만나요.' 형식.",
     "대사는 한 컷에 1~2마디, 4초 안에 말할 수 있게 짧게(15자 안팎).",
     "숫자는 나레이션에서 한글로 풀어 쓴다. 실존 인물·실제 사건처럼 쓰지 말 것. 모두 가상의 이야기."
   ],
   "upload": {
-    "description_tail": "제철 먹거리·생활 꿀팁은 모니마켓 구독으로 받아 보세요 🛒",
-    "base_tags": "모니마켓,약식동원,제철음식,건강음식,한약재,감동사연,반전,먹거리,shorts",
+    "description_tail": "밥상 위 재료에 숨은 이야기, 밥상 너머 이야기 구독으로 만나 보세요 🍚",
+    "base_tags": "밥상너머이야기,약식동원,제철음식,건강음식,한약재,감동사연,반전,먹거리,shorts",
     "pinned_tail": "다음엔 어떤 재료가 궁금하세요? 댓글로 남겨 주세요 💬"
   },
   "visual_style": "photorealistic cinematic Korean everyday drama, traditional market or home kitchen, warm bright natural light, appetizing close-ups of the ingredient, vertical 9:16, no text, no subtitles, no watermark"
