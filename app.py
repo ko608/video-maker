@@ -141,6 +141,29 @@ with tab2:
         style = chs_by_id.get(data.get("channel"), {}).get("visual_style", "photorealistic, vertical 9:16, no text")
         st.markdown("**방법 A — 자동(API, 유료)**: 버튼 하나로 이미지·대사 영상을 만듭니다.  \n"
                     "**방법 B — 플로우(무료)**: 아래 문구를 플로우에 넣어 만든 뒤, 컷마다 파일을 올리세요.")
+        # ---- 👤 등장인물 기준 그림: 모든 컷에서 같은 사람 나오게 ----
+        ref = p / "재료" / "인물기준.png"
+        st.markdown("### 👤 등장인물 기준 그림 (모든 컷 같은 사람)")
+        rc1, rc2 = st.columns([3, 2])
+        rc1.caption("주인공들이 한 화면에 나란히 선 그림 1장. 자동 그림은 이걸 보고 같은 얼굴로 그리고, "
+                    "플로우에서는 이 그림을 '참고 이미지(재료)'로 넣으면 같은 사람이 나와요.")
+        if rc1.button("👤 기준 그림 만들기 (1장, 수십 원)"):
+            try:
+                with st.spinner("기준 그림 만드는 중…"):
+                    ai.make_image(cfg, f"Character reference sheet: all main characters standing side by side, full body, "
+                                       f"facing camera, plain bright background, clear faces. {data.get('characters','')}. "
+                                       "Ordinary everyday Korean people with average, natural faces, not celebrities. "
+                                       "Photorealistic, no text.", ref)
+            except Exception as e:
+                st.error(f"오류: {e}")
+        upr = rc1.file_uploader("또는 플로우에서 만든 인물 그림 올리기", type=["png", "jpg", "jpeg", "webp"], key="ref_up")
+        if upr is not None:
+            ref.write_bytes(upr.getbuffer())
+        if ref.exists():
+            rc2.image(str(ref), caption="인물 기준 그림", width="stretch")
+            rc2.download_button("⬇ 기준 그림 받기 (플로우에 넣기)", ref.read_bytes(), file_name="인물기준.png",
+                                mime="image/png", key="dl_ref")
+        st.divider()
         colA, colB = st.columns(2)
         mode_video = colA.checkbox("대사 영상도 자동으로 (구글 Omni — 유료, 1컷 수백 원)", value=False)
         make_still = colA.checkbox("대사 컷 '첫 장면 그림'도 만들기 (플로우 시작 이미지용 — 1장 수십~백여 원)", value=False)
@@ -157,7 +180,7 @@ with tab2:
                 try:
                     if c["kind"] == "image":
                         log(f"컷 {no}: 이미지 만드는 중")
-                        ai.make_image(cfg, base, p / "재료" / f"{no:02d}.png")
+                        ai.make_image(cfg, base, p / "재료" / f"{no:02d}.png", ref=ref)
                     else:
                         if not (mode_video or make_still):
                             continue
@@ -165,7 +188,7 @@ with tab2:
                         if not still.exists():
                             log(f"컷 {no}: 첫 장면 그림 만드는 중 (플로우 시작 이미지용)")
                             ai.make_image(cfg, base + f". The speaker ({c.get('speaker_en') or c.get('speaker','')}) is in the foreground, "
-                                          "face clearly visible, about to speak.", still)
+                                          "face clearly visible, about to speak.", still, ref=ref)
                         if not mode_video:
                             continue
                         log(f"컷 {no}: 대사 영상 만드는 중 (1~3분)")
@@ -187,7 +210,7 @@ with tab2:
         st.markdown("### 🆓 플로우로 한 번에 만들기 (무료)")
         common = ("세로 9:16, 사실적인 영화 같은 장면, 글자·자막 없이. 평범한 동네 사람 얼굴(연예인·모델·아이돌 같지 않게, "
                   f"화장 옅게, 자연스러운 피부). 모든 장면에서 같은 인물: {data.get('characters','')}")
-        lines_all = [f"아래 {len(data['cuts'])}개를 순서대로 만들어 줘. 공통: {common}", ""]
+        lines_all = [f"아래 {len(data['cuts'])}개를 순서대로 만들어 줘. 첨부한 인물 기준 그림과 똑같은 사람(얼굴·머리·옷)으로. 공통: {common}", ""]
         for c in data["cuts"]:
             if c["kind"] == "video":
                 lines_all.append(f"{c['no']}번 [영상 4초] {c['visual']} / 대사({c.get('speaker','')}): \"{c['line']}\" "
@@ -326,7 +349,8 @@ with tab3:
                 final = assemble.assemble(p, cuts, cfg, music=music, log=log)
                 # 썸네일 사진: 재료 폴더의 그림 중 가장 해상도 높은 원본
                 from PIL import Image as _I
-                pics = [x for x in (p / "재료").iterdir() if x.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")]
+                pics = [x for x in (p / "재료").iterdir() if x.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")
+                        and "기준" not in x.name]
                 def _px(x):
                     try:
                         w_, h_ = _I.open(x).size; return w_ * h_

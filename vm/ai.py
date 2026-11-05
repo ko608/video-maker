@@ -133,16 +133,23 @@ def write_script(cfg, channel, analysis="", topic=""):
 
 
 # ---------------- 3. 이미지 (나노바나나) ----------------
-def make_image(cfg, prompt, out_path, aspect="9:16"):
+def make_image(cfg, prompt, out_path, aspect="9:16", ref=None):
+    """ref: 등장인물 기준 그림 — 넣으면 모든 컷에서 같은 사람으로 그림"""
     from google.genai import types
     client = _gclient(cfg)
+    contents = prompt
+    if ref and Path(ref).exists():
+        mime = "image/png" if str(ref).lower().endswith(".png") else "image/jpeg"
+        contents = [types.Part.from_bytes(data=Path(ref).read_bytes(), mime_type=mime),
+                    "The attached image is the CHARACTER REFERENCE. Keep exactly the same people "
+                    "(same faces, hair, age, clothes) in this new scene. Do not copy its layout. " + prompt]
     def call(m):
         # 고화질(2K)로 먼저 요청 → 모델이 못 하면 기본 크기로
         for size in (cfg.get("image_size", "2K"), None):
             ic = types.ImageConfig(aspect_ratio=aspect, image_size=size) if size else types.ImageConfig(aspect_ratio=aspect)
             try:
                 return client.models.generate_content(
-                    model=m, contents=prompt,
+                    model=m, contents=contents,
                     config=types.GenerateContentConfig(response_modalities=["IMAGE"], image_config=ic))
             except Exception as e:
                 if size and any(k in str(e) for k in ("400", "INVALID_ARGUMENT", "image_size")):
