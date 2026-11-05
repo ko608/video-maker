@@ -267,6 +267,29 @@ with tab3:
         missing = [int(c["no"]) for c in data["cuts"] if not cut_file(p, int(c["no"]))]
         if missing:
             st.warning(f"재료가 없는 컷: {missing} — ② 탭에서 채워 주세요.")
+        with st.expander("✏️ 나레이션·자막 고치기 (고친 뒤 '영상 만들기'를 다시 누르면 반영돼요)"):
+            st.caption("그림 컷: 나레이션 글을 고치면 목소리를 새로 만들어요(수십 원).  "
+                       "대사 컷: 화면 자막만 바뀌어요 — 영상 속 실제 말소리는 영상을 다시 만들어야 바뀝니다.")
+            edits = {}
+            for c in data["cuts"]:
+                no = int(c["no"])
+                if c["kind"] == "image":
+                    edits[no] = st.text_area(f"컷 {no} 나레이션", c.get("narration", ""), height=100, key=f"nar_{p.name}_{no}")
+                else:
+                    edits[no] = st.text_input(f"컷 {no} 대사 자막", c.get("line", ""), key=f"line_{p.name}_{no}")
+            if st.button("💾 고친 글 저장", key="save_text"):
+                changed = []
+                for c in data["cuts"]:
+                    no = int(c["no"])
+                    field = "narration" if c["kind"] == "image" else "line"
+                    if edits[no] != c.get(field, ""):
+                        c[field] = edits[no]
+                        changed.append(no)
+                        if field == "narration":   # 옛 목소리 지우기 → 다음에 새로 만듦
+                            for old in (p / "work").glob(f"*_{no:02d}.wav"):
+                                old.unlink()
+                save_script(p, data)
+                st.success(f"저장했어요 (바뀐 컷: {changed or '없음'}). 아래 '🎬 영상 만들기'를 다시 누르세요.")
         mup = st.file_uploader("🎵 배경음악 파일 올리기 (mp3·wav·m4a — 한 번 올리면 music 폴더에 계속 남아요)",
                                type=["mp3", "wav", "m4a"], key="music_up")
         if mup is not None:
