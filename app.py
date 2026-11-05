@@ -18,7 +18,14 @@ h1,h2,h3{color:#5E1813}
 .stButton>button{font-size:18px;font-weight:700}
 </style>""", unsafe_allow_html=True)
 st.title("🎬 영상 자판기")
-st.caption("잘 되는 영상 링크 → 분석 → 우리식 대본 → 재료 → 완성 영상까지")
+def _version():
+    try:
+        import subprocess
+        return subprocess.run(["git", "log", "-1", "--format=%cd", "--date=format:%m월 %d일 %H:%M"],
+                              cwd=str(config.ROOT), capture_output=True, text=True, timeout=5).stdout.strip()
+    except Exception:
+        return "?"
+st.caption(f"잘 되는 영상 링크 → 분석 → 우리식 대본 → 재료 → 완성 영상까지  ·  버전: {_version()}")
 
 
 # ---------------- 도우미 ----------------
