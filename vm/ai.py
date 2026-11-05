@@ -52,7 +52,20 @@ def _with_retry(fn, models):
                 last = e
                 msg = str(e)
                 if "exceeded your current quota" in msg or "billing" in msg:
-                    raise RuntimeError("구글 무료 한도로는 이 기능(그림·목소리)을 쓸 수 없어요. AI Studio에서 결제(Billing)를 켜거나, 플로우에서 만들어 올려 주세요.")
+                    if "limit: 0" in msg or "free_tier" in msg.lower():
+                        raise RuntimeError("구글 무료 한도로는 이 기능(그림·목소리)을 쓸 수 없어요. AI Studio에서 결제(Billing)를 켜거나, 플로우에서 만들어 올려 주세요.")
+                    # 결제는 켜져 있는데 '1분당 횟수' 한도에 걸림 → 1분쯤 쉬었다 같은 모델로 다시
+                    for w2 in (30, 45, 60):
+                        time.sleep(w2)
+                        try:
+                            return fn(m)
+                        except Exception as e2:
+                            last = e2
+                            if "exceeded your current quota" not in str(e2):
+                                break
+                    raise RuntimeError("구글 사용 한도에 걸렸어요. ① 1분당 횟수 한도면 몇 분 뒤 다시 누르면 이어서 만들어요 "
+                                       "(이미 만든 건 그대로 둠). ② AI Studio에서 정한 월 사용 한도(지출 한도)에 닿았으면 한도를 올려 주세요. ("
+                                       + str(last)[:200] + ")")
                 if any(k in msg for k in ("404", "NOT_FOUND", "no longer available", "not supported")):
                     break  # 이 모델은 못 씀 → 바로 다음 모델로
                 if not any(k in msg for k in ("503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "overloaded", "500")):
