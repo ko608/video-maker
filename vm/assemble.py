@@ -183,7 +183,7 @@ def thumbnail_wide(project: Path, lines, photo, cfg):
     font_path = cfg["font_path"]
     f = lambda sz: ImageFont.truetype(font_path, sz)
     TW, TH = 1280, 720
-    PW = 520                                   # 왼쪽 글씨판 너비
+    PW = 460                                   # 왼쪽 글씨판 너비 (사진 넓게)
     img = Image.new("RGB", (TW, TH))
     d = ImageDraw.Draw(img)
     for xx in range(PW + 40):                  # 밝은 황금색 → 연노랑
@@ -213,15 +213,15 @@ def thumbnail_wide(project: Path, lines, photo, cfg):
         return out
 
     L = (list(lines) + ["", "", ""])[:3]
-    spec = [(L[0], 62, (30, 30, 30), "white", 6), (L[1], 96, (225, 25, 25), "white", 9),
-            (L[2], 50, (40, 40, 40), "white", 5)]
+    # 글자는 적게: 작은 윗줄 + 크고 빨간 핵심 한 줄 (3번째 줄은 뺌)
+    spec = [(L[0], 58, (30, 30, 30), "white", 6), (L[1], 130, (225, 25, 25), "white", 11)]
     blocks = []
     for txt, size, fill, sf, st_ in spec:
         if not txt:
             continue
-        rows = wrap(txt, size, PW - 50)
-        while len(rows) > 2 and size > 36:
-            size -= 6; rows = wrap(txt, size, PW - 50)
+        rows = wrap(txt, size, PW - 75)
+        while size > 36 and (len(rows) > 2 or max(d.textlength(r, font=f(size)) for r in rows) > PW - 60):
+            size -= 6; rows = wrap(txt, size, PW - 75)
         blocks.append((rows, size, fill, sf, st_))
     total = sum(len(r) * (sz + 12) for r, sz, *_ in blocks) + 30 * (len(blocks) - 1)
     y = max(20, (TH - total) // 2)
