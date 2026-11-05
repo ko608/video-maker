@@ -112,7 +112,7 @@ SCRIPT_PROMPT = """당신은 조회수가 잘 나오는 한국 유튜브 스토�
  ]
 }}
 cuts는 정확히 {ncuts}개, 규칙의 컷 구성을 따르세요.
-각 컷의 visual은 서로 확실히 달라야 합니다 — 장소·행동·카메라 구도(클로즈업/전신/손 클로즈업 등)·등장인물 조합을 컷마다 바꾸고, 같은 문장을 되풀이하지 마세요."""
+각 컷의 visual에는 시대·장소를 구체적으로 쓰세요(예: 1970s shabby thatched-roof mountain tavern, small dim-free room with paper doors). 각 컷의 visual은 서로 확실히 달라야 합니다 — 장소·행동·카메라 구도(클로즈업/전신/손 클로즈업 등)·등장인물 조합을 컷마다 바꾸고, 같은 문장을 되풀이하지 마세요."""
 
 
 def write_script(cfg, channel, analysis="", topic=""):
