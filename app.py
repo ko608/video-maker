@@ -150,7 +150,7 @@ with tab2:
         if rc1.button("👤 기준 그림 만들기 (1장, 수십 원)"):
             try:
                 with st.spinner("기준 그림 만드는 중…"):
-                    ai.make_image(cfg, f"Character reference sheet: all main characters standing side by side, full body, "
+                    ai.make_image(cfg, f"Character reference sheet: all main characters standing side by side, left to right in the order listed, full body, "
                                        f"facing camera, plain bright background, clear faces. {data.get('characters','')}. "
                                        "Ordinary everyday Korean people with average, natural faces, not celebrities. "
                                        "Photorealistic, no text.", ref)
@@ -210,7 +210,7 @@ with tab2:
         st.markdown("### 🆓 플로우로 한 번에 만들기 (무료)")
         common = ("세로 9:16, 사실적인 영화 같은 장면, 글자·자막 없이. 평범한 동네 사람 얼굴(연예인·모델·아이돌 같지 않게, "
                   f"화장 옅게, 자연스러운 피부). 모든 장면에서 같은 인물: {data.get('characters','')}")
-        lines_all = [f"아래 {len(data['cuts'])}개를 순서대로 만들어 줘. 첨부한 인물 기준 그림과 똑같은 사람(얼굴·머리·옷)으로. 공통: {common}", ""]
+        lines_all = [f"아래 {len(data['cuts'])}개를 순서대로 만들어 줘. 첨부한 인물 기준 그림과 똑같은 사람(얼굴·머리·옷)으로 — 기준 그림의 왼쪽부터 등장인물 설명 순서대로. 여러 명이 나오는 장면도 각자 기준 그림의 그 사람으로. 공통: {common}", ""]
         for c in data["cuts"]:
             if c["kind"] == "video":
                 lines_all.append(f"{c['no']}번 [영상 4초] {c['visual']} / 대사({c.get('speaker','')}): \"{c['line']}\" "
