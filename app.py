@@ -152,7 +152,7 @@ with tab2:
                 with st.spinner("기준 그림 만드는 중…"):
                     ai.make_image(cfg, f"Character reference sheet: all main characters standing side by side, left to right in the order listed, full body, "
                                        f"facing camera, plain bright background, clear faces. {data.get('characters','')}. "
-                                       "Ordinary everyday Korean people with average, natural faces, not celebrities. "
+                                       "Ordinary everyday Korean people with average, natural faces. "
                                        "Bright, airy, high-key lighting, no text.", ref)
             except Exception as e:
                 st.error(f"오류: {e}")
@@ -176,7 +176,7 @@ with tab2:
                     continue
                 base = (f"Scene {no}: {c['visual']}. Style: {style}. Characters: {data.get('characters','')}. "
                         "Ordinary everyday Korean people with average, natural faces, light natural makeup, "
-                        "realistic skin texture, not celebrities, not models, not idols")
+                        "realistic skin texture")
                 try:
                     if c["kind"] == "image":
                         log(f"컷 {no}: 이미지 만드는 중")
@@ -208,16 +208,15 @@ with tab2:
 
         # ---- 플로우(무료) 한 번에: 전체 문구 + 한꺼번에 올리기 ----
         st.markdown("### 🆓 플로우로 한 번에 만들기 (무료)")
-        common = ("세로 9:16, 밝고 환한 현대식 배경(하얀 벽·밝은 원목·파스텔), 햇살 가득, 어두운 그림자 없이, 요즘 드라마처럼 화사하게, 글자·자막 없이. 평범한 동네 사람 얼굴(연예인·모델·아이돌 같지 않게, "
-                  f"화장 옅게, 자연스러운 피부). 모든 장면에서 같은 인물: {data.get('characters','')}")
-        lines_all = [f"아래 {len(data['cuts'])}개를 순서대로 만들어 줘. 첨부한 인물 기준 그림과 똑같은 사람(얼굴·머리·옷)으로 — 기준 그림의 왼쪽부터 등장인물 설명 순서대로. 여러 명이 나오는 장면도 각자 기준 그림의 그 사람으로. 공통: {common}", ""]
+        common = ("세로 9:16, 밝고 환한 현대식 배경(하얀 벽·밝은 원목·파스텔), 햇살 가득, 어두운 그림자 없이, 요즘 드라마처럼 화사하게, 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, "
+                  f"자연스러운 피부). 모든 장면에서 같은 인물: {data.get('characters','')}")
+        lines_all = [f"아래 그림들을 순서대로 만들어 줘. 첨부한 인물 기준 그림과 똑같은 사람(얼굴·머리·옷)으로 — 기준 그림의 왼쪽부터 등장인물 설명 순서대로. 여러 명이 나오는 장면도 각자 기준 그림의 그 사람으로. 공통: {common}", ""]
         for c in data["cuts"]:
             if c["kind"] == "video":
-                lines_all.append(f"{c['no']}번 [영상 4초] {c['visual']} / 대사({c.get('speaker','')}): \"{c['line']}\" "
-                                 "— 이 사람만 말하고 다른 사람은 입을 다문다")
+                continue   # 대사 영상은 컷마다 시작 그림을 넣고 아래 짧은 문구로 따로 만들기
             else:
                 lines_all.append(f"{c['no']}번 [이미지] {c['visual']}")
-        st.text_area("① 이 문구 전체를 복사 → 플로우 오른쪽 채팅창에 한 번에 붙여 넣기",
+        st.text_area("① 그림 컷 문구 전체 복사 → 플로우 채팅창에 한 번에 (대사 영상은 아래 컷마다 짧은 문구로)",
                      "\n".join(lines_all), height=220, key="flow_all")
         empty = [int(c["no"]) for c in data["cuts"] if not cut_file(p, int(c["no"]))]
         ups = st.file_uploader(f"② 플로우에서 받은 파일들을 한꺼번에 올리기 — 빈 컷 {empty} 에 "
@@ -247,11 +246,16 @@ with tab2:
             l, m, r = st.columns([2, 3, 2])
             l.markdown(f"### 컷 {no} · {'🎥 대사 영상' if c['kind']=='video' else '🖼️ 이미지+나레이션'}")
             l.write(c["line"] or c["narration"])
-            flow = (f"[컷 {no} 장면] {c['visual']}"
-                    + (f"\n[대사] {c.get('speaker','')}: \"{c['line']}\" (한국어, 4초)" if c["kind"] == "video" else "")
-                    + "\n[공통] 세로 9:16, 밝고 환한 현대식 배경(하얀 벽·밝은 원목·파스텔), 햇살 가득, 어두운 그림자 없이, 요즘 드라마처럼 화사하게, 글자·자막 없이. "
-                      "평범한 동네 사람 얼굴(연예인·모델·아이돌 같지 않게, 화장 옅게, 자연스러운 피부). "
-                    + f"등장인물: {data.get('characters','')}")
+            if c["kind"] == "video":
+                # 플로우 영상은 짧게 — 시작 그림이 인물·배경을 이미 담고 있음 (긴 문구는 거절되기 쉬움)
+                flow = (f"첨부한 시작 그림에서 이어지는 4초 영상. {c['visual']}\n"
+                        f"{c.get('speaker','')} 말함: \"{c['line']}\"\n"
+                        "다른 사람은 말하지 않음. 밝고 환한 분위기, 자막 없이.")
+            else:
+                flow = (f"[컷 {no} 장면] {c['visual']}"
+                        "\n[공통] 세로 9:16, 밝고 환한 현대식 배경(하얀 벽·밝은 원목·파스텔), 햇살 가득, "
+                        "요즘 드라마처럼 화사하게, 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, 자연스러운 피부). "
+                        + f"등장인물: {data.get('characters','')}")
             m.text_area("플로우에 넣을 문구 (복사) — 맨 위가 이 컷만의 장면", flow, height=170, key=f"flow{no}")
             up = m.file_uploader("플로우에서 받은 파일 올리기", type=["png", "jpg", "jpeg", "webp", "mp4", "mov"], key=f"up{no}")
             if up is not None:
