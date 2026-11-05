@@ -116,7 +116,7 @@ with tab1:
     if d:
         st.subheader("✍️ 대본 (칸을 눌러 바로 고칠 수 있어요)")
         cuts = st.data_editor(d["cuts"], num_rows="fixed", width="stretch",
-                              column_config={"no": "컷", "kind": "종류(video/image)", "line": "대사",
+                              column_config={"no": "컷", "chapter": "장", "kind": "종류(video/image)", "line": "대사",
                                              "speaker": "누가", "speaker_en": "말하는 사람(영어)", "narration": "나레이션", "visual": "장면 묘사(영어)"})
         a, b = st.columns(2)
         title = a.selectbox("제목", d.get("title_options", ["제목"]))
@@ -144,6 +144,9 @@ with tab2:
     else:
         p = st.selectbox("프로젝트", ps, format_func=lambda x: x.name, key="p2")
         data = load_script(p)
+        fmt = data.get("format", "shorts")
+        aspect = "16:9" if fmt == "longform" else "9:16"
+        ratio_ko = "가로 16:9" if fmt == "longform" else "세로 9:16"
         chs_by_id = {c["id"]: c for c in channels().values()}
         style = chs_by_id.get(data.get("channel"), {}).get("visual_style", "photorealistic, vertical 9:16, no text")
         st.markdown("**방법 A — 자동(API, 유료)**: 버튼 하나로 이미지·대사 영상을 만듭니다.  \n"
@@ -160,7 +163,7 @@ with tab2:
                     ai.make_image(cfg, f"Character reference sheet: all main characters standing side by side, left to right in the order listed, full body, "
                                        f"facing camera, plain bright background, clear faces. {data.get('characters','')}. "
                                        "Ordinary everyday Korean people with average, natural faces. "
-                                       "Bright, airy, high-key lighting, no text.", ref)
+                                       "Bright, airy, high-key lighting, no text.", ref, aspect=aspect)
             except Exception as e:
                 st.error(f"오류: {e}")
         upr = rc1.file_uploader("또는 플로우에서 만든 인물 그림 올리기", type=["png", "jpg", "jpeg", "webp"], key="ref_up")
@@ -187,7 +190,7 @@ with tab2:
                 try:
                     if c["kind"] == "image":
                         log(f"컷 {no}: 이미지 만드는 중")
-                        ai.make_image(cfg, base, p / "재료" / f"{no:02d}.png", ref=ref)
+                        ai.make_image(cfg, base, p / "재료" / f"{no:02d}.png", ref=ref, aspect=aspect)
                     else:
                         if not (mode_video or make_still):
                             continue
@@ -195,7 +198,7 @@ with tab2:
                         if not still.exists():
                             log(f"컷 {no}: 첫 장면 그림 만드는 중 (플로우 시작 이미지용)")
                             ai.make_image(cfg, base + f". The speaker ({c.get('speaker_en') or c.get('speaker','')}) is in the foreground, "
-                                          "face clearly visible, about to speak.", still, ref=ref)
+                                          "face clearly visible, about to speak.", still, ref=ref, aspect=aspect)
                         if not mode_video:
                             continue
                         log(f"컷 {no}: 대사 영상 만드는 중 (1~3분)")
@@ -215,7 +218,7 @@ with tab2:
 
         # ---- 플로우(무료) 한 번에: 전체 문구 + 한꺼번에 올리기 ----
         st.markdown("### 🆓 플로우로 한 번에 만들기 (무료)")
-        common = ("세로 9:16, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로(옛날 초가 주막이면 허름한 초가 그대로 — 더 부유하거나 현대식으로 바꾸지 말 것), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, "
+        common = (f"{ratio_ko}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로(옛날 초가 주막이면 허름한 초가 그대로 — 더 부유하거나 현대식으로 바꾸지 말 것), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, "
                   f"자연스러운 피부). 모든 장면에서 같은 인물: {data.get('characters','')}")
         lines_all = [f"아래 그림들을 순서대로 만들어 줘. 첨부한 인물 기준 그림과 똑같은 사람(얼굴·머리·옷)으로 — 기준 그림의 왼쪽부터 등장인물 설명 순서대로. 여러 명이 나오는 장면도 각자 기준 그림의 그 사람으로. 공통: {common}", ""]
         for c in data["cuts"]:
@@ -252,7 +255,9 @@ with tab2:
             f = cut_file(p, no)
             l, m, r = st.columns([2, 3, 2])
             l.markdown(f"### 컷 {no} · {'🎥 대사 영상' if c['kind']=='video' else '🖼️ 이미지+나레이션'}")
-            l.write(c["line"] or c["narration"])
+            if c.get("chapter"):
+                l.markdown(f"**📖 {c['chapter']}**")
+            l.write(c.get("line") or c.get("narration", ""))
             if c["kind"] == "video":
                 # 플로우 영상은 짧게 — 시작 그림이 인물·배경을 이미 담고 있음 (긴 문구는 거절되기 쉬움)
                 flow = (f"첨부한 시작 그림에서 이어지는 4초 영상. {c['visual']}\n"
@@ -260,7 +265,7 @@ with tab2:
                         "다른 사람은 말하지 않음. 밝고 환한 분위기, 자막 없이.")
             else:
                 flow = (f"[컷 {no} 장면] {c['visual']}"
-                        "\n[공통] 세로 9:16, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로 "
+                        f"\n[공통] {ratio_ko}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로 "
                         "(더 부유하거나 현대식으로 바꾸지 말 것), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, 자연스러운 피부). "
                         + f"등장인물: {data.get('characters','')}")
             m.text_area("플로우에 넣을 문구 (복사) — 맨 위가 이 컷만의 장면", flow, height=170, key=f"flow{no}")
@@ -298,6 +303,9 @@ with tab3:
     else:
         p = st.selectbox("프로젝트", ps, format_func=lambda x: x.name, key="p3")
         data = load_script(p)
+        fmt = data.get("format", "shorts")
+        aspect = "16:9" if fmt == "longform" else "9:16"
+        ratio_ko = "가로 16:9" if fmt == "longform" else "세로 9:16"
         missing = [int(c["no"]) for c in data["cuts"] if not cut_file(p, int(c["no"]))]
         if missing:
             st.warning(f"재료가 없는 컷: {missing} — ② 탭에서 채워 주세요.")
@@ -356,8 +364,23 @@ with tab3:
                                 log(f"컷 {no}: 나레이션 목소리 만드는 중")
                                 ai.make_tts(cfg, c["narration"], wav)
                             audio = wav
-                    cuts.append(dict(media=media, audio=audio, text=c["line"] or c["narration"]))
-                final = assemble.assemble(p, cuts, cfg, music=music, log=log)
+                    cuts.append(dict(media=media, audio=audio, text=c.get("line") or c.get("narration", "")))
+                assemble.set_format(fmt)
+                cfg2 = dict(cfg)
+                if fmt == "longform":   # 가로 영상: 자막은 아래쪽, 한 줄 길게
+                    cfg2.update(subtitle_y=0.86, subtitle_size=58, subtitle_chars=24)
+                durs = []
+                final = assemble.assemble(p, cuts, cfg2, music=music, log=log, durs=durs)
+                chapters_txt = ""
+                if fmt == "longform":
+                    t_, rows = 0.0, []
+                    for c, d_ in zip(data["cuts"], durs):
+                        if c.get("chapter"):
+                            rows.append(f"{int(t_ // 60)}:{int(t_ % 60):02d} {c['chapter']}")
+                        t_ += d_
+                    if rows:
+                        rows[0] = "0:00 " + rows[0].split(" ", 1)[1]
+                        chapters_txt = "\n\n[챕터 — 설명란에 그대로 붙이세요]\n" + "\n".join(rows)
                 # 썸네일 사진: 재료 폴더의 그림 중 가장 해상도 높은 원본
                 from PIL import Image as _I
                 pics = [x for x in (p / "재료").iterdir() if x.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")
@@ -369,7 +392,7 @@ with tab3:
                         return 0
                 photo = max(pics, key=_px) if pics else None
                 assemble.thumbnail(p, data.get("thumbnail", []), photo, cfg)
-                info = (f"[제목]\n{data.get('title','')}\n\n[설명]\n{data.get('description','')}\n\n"
+                info = (f"[제목]\n{data.get('title','')}\n\n[설명]\n{data.get('description','')}{chapters_txt}\n\n"
                         f"[태그]\n{data.get('tags','')}\n\n[고정 댓글]\n{data.get('pinned_comment','')}\n\n"
                         "※ 업로드할 때 '변경되거나 합성된 콘텐츠' 질문에 '예'를 체크하세요.\n")
                 (p / "업로드정보.txt").write_text(info, encoding="utf-8")

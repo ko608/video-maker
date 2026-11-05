@@ -1,0 +1,25 @@
+{
+  "id": "babsang_longform",
+  "name": "밥상 너머 이야기 · 롱폼 오디오 드라마 (10~15분)",
+  "format": "longform",
+  "cuts": 30,
+  "chapters": 5,
+  "rules": [
+    "오디오 드라마형 롱폼: 장면 그림 위에 나레이션이 이야기를 끌고 가고, 인물 대사는 나레이션 안에 \"큰따옴표\"로 생생하게 넣는다.",
+    "무대는 밥상 — 가족의 식탁(명절·제사·생일상·시댁 밥상) 또는 식당(국밥집·백반집·작은 식당 등).",
+    "이야기 종류: 감동(숨은 사연·희생), 갈등(부부·고부·형제), 진상(무시·갑질 뒤 통쾌한 반전) — 셋을 섞어도 좋다.",
+    "첫 컷 첫 문장부터 갈등이나 의문이 터져야 한다. 배경 설명으로 시작하지 말 것.",
+    "10초마다 다음이 궁금해지게 — 작은 의문·복선을 계속 깔고, 장마다 끝에 '그런데…' 하는 걸이를 둔다. 뻔한 흐름 금지.",
+    "중간(3장 무렵)에 첫 반전, 마지막 장에 가장 큰 반전(숨은 정체·과거·진실)으로 시원하게 뒤집는다.",
+    "음식 하나가 이야기의 열쇠가 되게 한다 (그 음식에 얽힌 추억·비밀). 음식 장면을 자주 넣는다.",
+    "마지막 컷은 여운 + 시청자에게 묻는 한 문장('여러분은 어떤 밥상이 가장 그리우신가요?') + '밥상 너머 이야기에서 또 만나요.'",
+    "숫자는 한글로 풀어 쓴다. 실존 인물·실제 가게·실제 사건처럼 쓰지 말 것. 모두 가상의 이야기.",
+    "폭력·욕설 묘사는 하지 않는다. 진상도 말과 태도로만 표현."
+  ],
+  "upload": {
+    "description_tail": "밥상 위에서 벌어진 가족·식당 이야기, 밥상 너머 이야기 구독으로 만나 보세요 🍚",
+    "base_tags": "밥상너머이야기,오디오드라마,감동사연,가족사연,식당사연,반전,사연,창작드라마,라디오드라마",
+    "pinned_tail": "여러분 밥상에서 있었던 이야기도 댓글로 들려주세요 💬"
+  },
+  "visual_style": "bright exposure and high-key lighting, plenty of soft daylight, clear and vivid but natural colors, no dark or gloomy look. The setting, buildings, rooms, props and clothes must match the story's era and place exactly as described in the scene — brightness only, never make places richer or more modern than described. Realistic Korean drama look, horizontal 16:9 wide shot composition, no text, no subtitles, no watermark"
+}

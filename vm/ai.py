@@ -16,6 +16,10 @@ def _claude(cfg, prompt, max_tokens=8000):
     if not cfg.get("anthropic_api_key"):
         raise RuntimeError("설정에서 Anthropic 키를 넣어 주세요.")
     c = anthropic.Anthropic(api_key=cfg["anthropic_api_key"])
+    if max_tokens > 8000:   # 긴 대본(롱폼)은 끊기지 않게 스트리밍으로 받기
+        with c.messages.stream(model=cfg["claude_model"], max_tokens=max_tokens,
+                               messages=[{"role": "user", "content": prompt}]) as st_:
+            return st_.get_final_text().strip()
     r = c.messages.create(model=cfg["claude_model"], max_tokens=max_tokens,
                           messages=[{"role": "user", "content": prompt}])
     return "".join(b.text for b in r.content if getattr(b, "type", "") == "text").strip()
@@ -115,11 +119,64 @@ cuts는 정확히 {ncuts}개, 규칙의 컷 구성을 따르세요.
 각 컷의 visual에는 시대·장소를 구체적으로 쓰세요(예: 1970s shabby thatched-roof mountain tavern, small dim-free room with paper doors). 각 컷의 visual은 서로 확실히 달라야 합니다 — 장소·행동·카메라 구도(클로즈업/전신/손 클로즈업 등)·등장인물 조합을 컷마다 바꾸고, 같은 문장을 되풀이하지 마세요."""
 
 
-def write_script(cfg, channel, analysis="", topic=""):
-    prompt = SCRIPT_PROMPT.format(
+LONG_SCRIPT_PROMPT = """당신은 조회수가 잘 나오는 한국 유튜브 '오디오 드라마형' 롱폼(10~15분) 작가입니다.
+화면은 장면 그림 + 나레이션(인물 대사 포함)으로 진행됩니다. 아래 [채널 규칙]을 반드시 지키세요.
+
+[채널] {name}
+[채널 규칙]
+{rules}
+
+[참고: 잘 된 영상 분석 — 구조와 리듬만 참고, 인물·사연·대사는 완전히 새로]
+{analysis}
+
+[대표님 요청 주제/메모]
+{topic}
+
+아래 JSON 하나만 출력하세요. 다른 말은 쓰지 마세요.
+{{
+ "title_options": ["제목 후보 3개 — '○○인 줄 알았는데, △△였습니다｜짧은 대사' 형식"],
+ "description": "유튜브 설명 4~6줄 (줄바꿈은 \\n). 마지막 줄은 '※ 이 영상은 창작 드라마이며 등장인물과 사건은 모두 가상입니다.'",
+ "tags": "쉼표로 구분한 태그 한 줄 (15개 안팎)",
+ "pinned_comment": "고정 댓글 한 줄 (시청자 경험을 묻는 질문)",
+ "thumbnail": ["썸네일 1줄(흰 글씨, 짧게)", "2줄(노란 큰 글씨, 핵심 반전)", "3줄(작게, 궁금증)"],
+ "music_mood": "배경음악 분위기 한 줄",
+ "characters": "등장인물 외모 설명(영어, 모든 장면에서 같은 사람으로 보이게): 이름·나이·머리·옷",
+ "chapters": [
+  {{"title": "장 제목(짧게)", "cuts": [
+    {{"narration": "나레이션 150~230자. 인물 대사는 \"큰따옴표\"로 넣어 생생하게", "visual": "영어 장면 묘사: 시대·장소 구체적으로, 인물·행동·표정, 카메라 구도"}}
+  ]}}
+ ]
+}}
+chapters는 {nchap}개, 전체 cuts 합계는 {ncuts}개 안팎(장마다 5~7개).
+각 장의 마지막 컷 나레이션은 다음 장이 궁금해지는 한 문장('그런데 그날 밤, …')으로 끝내세요.
+컷마다 visual은 서로 확실히 달라야 합니다(장소·구도·인물 조합을 바꿀 것)."""
+
+
+def _write_long(cfg, channel, analysis, topic):
+    prompt = LONG_SCRIPT_PROMPT.format(
         name=channel["name"], rules="\n".join("- " + r for r in channel["rules"]),
-        analysis=analysis or "(분석 없음)", topic=topic or "(자유 주제)", ncuts=channel["cuts"])
-    data = _json_from(_claude(cfg, prompt))
+        analysis=analysis or "(분석 없음)", topic=topic or "(자유 주제)",
+        ncuts=channel["cuts"], nchap=channel.get("chapters", 5))
+    data = _json_from(_claude(cfg, prompt, max_tokens=24000))
+    cuts, n = [], 0
+    for ch in data.get("chapters", []):
+        for i, c in enumerate(ch.get("cuts", [])):
+            n += 1
+            cuts.append({"no": n, "kind": "image", "chapter": ch.get("title", "") if i == 0 else "",
+                         "line": "", "speaker": "", "narration": c.get("narration", ""), "visual": c.get("visual", "")})
+    data["cuts"] = cuts
+    data.pop("chapters", None)
+    return data
+
+
+def write_script(cfg, channel, analysis="", topic=""):
+    if channel.get("format") == "longform":
+        data = _write_long(cfg, channel, analysis, topic)
+    else:
+        prompt = SCRIPT_PROMPT.format(
+            name=channel["name"], rules="\n".join("- " + r for r in channel["rules"]),
+            analysis=analysis or "(분석 없음)", topic=topic or "(자유 주제)", ncuts=channel["cuts"])
+        data = _json_from(_claude(cfg, prompt))
     up = channel.get("upload", {})
     if up.get("description_tail") and up["description_tail"] not in data.get("description", ""):
         data["description"] = data.get("description", "").rstrip() + "\n" + up["description_tail"]
@@ -129,6 +186,7 @@ def write_script(cfg, channel, analysis="", topic=""):
             if t not in have:
                 have.append(t)
         data["tags"] = ",".join(have)
+    data["format"] = channel.get("format", "shorts")
     return data
 
 

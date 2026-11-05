@@ -7,6 +7,12 @@ from PIL import Image, ImageDraw, ImageFont
 W, H, FPS = 1080, 1920, 30
 
 
+def set_format(fmt):
+    """shorts = 세로 1080x1920, longform = 가로 1920x1080"""
+    global W, H
+    W, H = (1920, 1080) if fmt == "longform" else (1080, 1920)
+
+
 def ffmpeg_exe():
     try:
         import imageio_ffmpeg
@@ -61,7 +67,7 @@ def subtitle_png(text, out_path, cfg):
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     stroke = max(4, size // 12)
-    lines = [text] if d.textlength(text, font=font) < W - 80 else split_chunks(text, 9)
+    lines = [text] if d.textlength(text, font=font) < W - 80 else split_chunks(text, max(9, len(text) // 2 + 1))
     y = int(H * float(cfg.get("subtitle_y", 0.55))) - (len(lines) * (size + 14)) // 2
     for ln in lines:
         w = d.textlength(ln, font=font)
@@ -87,7 +93,7 @@ def build_segment(work: Path, idx, cut, cfg, log=print):
         dur = (wav_seconds(audio) + 0.5) if audio else 4.0
 
     # 자막 PNG (문장을 나눠 시간 비율대로)
-    chunks = split_chunks(cut.get("text", ""))
+    chunks = split_chunks(cut.get("text", ""), int(cfg.get("subtitle_chars", 13)))
     total = sum(len(c) for c in chunks) or 1
     t, subs = 0.15, []
     for i, c in enumerate(chunks):
@@ -105,8 +111,9 @@ def build_segment(work: Path, idx, cut, cfg, log=print):
     else:
         frames = int(dur * FPS)
         args += ["-loop", "1", "-framerate", str(FPS), "-t", f"{dur:.2f}", "-i", str(media)]
-        filt.append(f"[0:v]scale={W*2}:{H*2}:force_original_aspect_ratio=increase,crop={W*2}:{H*2},"
-                    f"zoompan=z='min(zoom+0.0007,1.15)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={W}x{H}:fps={FPS},"
+        ZW, ZH = int(W * 1.25) // 2 * 2, int(H * 1.25) // 2 * 2
+        filt.append(f"[0:v]scale={ZW}:{ZH}:force_original_aspect_ratio=increase,crop={ZW}:{ZH},"
+                    f"zoompan=z='min(zoom+{0.13 / max(frames, 1):.6f},1.15)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={W}x{H}:fps={FPS},"
                     f"setsar=1[v0]")
     n_in = 1
     # 오디오 입력
@@ -139,13 +146,15 @@ def build_segment(work: Path, idx, cut, cfg, log=print):
 
 
 # ---------------- 전체 조립 ----------------
-def assemble(project: Path, cuts, cfg, music=None, log=print):
+def assemble(project: Path, cuts, cfg, music=None, log=print, durs=None):
     work = project / "work"
     work.mkdir(exist_ok=True)
     segs = []
     for i, c in enumerate(cuts, 1):
-        seg, _ = build_segment(work, i, c, cfg, log)
+        seg, d_ = build_segment(work, i, c, cfg, log)
         segs.append(seg)
+        if durs is not None:
+            durs.append(d_)
     lst = work / "list.txt"
     lst.write_text("".join(f"file '{s.name}'\n" for s in segs), encoding="utf-8")
     joined = work / "joined.mp4"
@@ -192,8 +201,9 @@ def thumbnail(project: Path, lines, photo, cfg):
     # 글씨 뒤만 살짝 어둡게 (위쪽 → 투명) — 사진은 밝게 살리고 글씨는 또렷하게
     shade = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     ds = ImageDraw.Draw(shade)
-    for yy in range(0, 1000):
-        a = int(120 * (1 - yy / 1000) ** 1.5)
+    SH = min(1000, int(H * 0.65))
+    for yy in range(0, SH):
+        a = int(120 * (1 - yy / SH) ** 1.5)
         ds.line([(0, yy), (W, yy)], fill=(0, 0, 0, a))
     img = Image.alpha_composite(img.convert("RGBA"), shade).convert("RGB")
     d = ImageDraw.Draw(img)
