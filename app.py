@@ -103,10 +103,13 @@ class Log:
         self.lines.append(str(s)); self.box.code("\n".join(self.lines[-14:]))
 
 
-tab1, tab2, tab3, tab4 = st.tabs(["① 분석·대본", "② 재료 만들기", "③ 완성 영상", "⚙️ 설정"])
+# 탭 대신 고르기 버튼 — 고른 화면만 그려서 가볍게 (st.tabs는 네 화면을 매번 다 그림)
+PAGES = ["① 분석·대본", "② 재료 만들기", "③ 완성 영상", "⚙️ 설정"]
+page = st.radio("화면", PAGES, horizontal=True, label_visibility="collapsed", key="page")
+st.divider()
 
 # ================= ① 분석·대본 =================
-with tab1:
+if page == "① 분석·대본":
     chs = channels()
     ch_name = st.selectbox("우리 채널", list(chs))
     ch = dict(chs[ch_name])
@@ -192,7 +195,7 @@ with tab1:
             st.success(f"저장했어요 → ② 재료 만들기 탭으로 가세요. (폴더: {p.name})")
 
 # ================= ② 재료 만들기 =================
-with tab2:
+if page == "② 재료 만들기":
     ps = projects()
     if not ps:
         st.info("먼저 ① 탭에서 대본을 저장하세요.")
@@ -353,7 +356,7 @@ with tab2:
             open_folder(p / "재료")
 
 # ================= ③ 완성 영상 =================
-with tab3:
+if page == "③ 완성 영상":
     ps = projects()
     if not ps:
         st.info("먼저 ① 탭에서 대본을 저장하세요.")
@@ -468,7 +471,7 @@ with tab3:
                 open_folder(p)
 
 # ================= ⚙️ 설정 =================
-with tab4:
+if page == "⚙️ 설정":
     st.markdown("키는 이 컴퓨터의 settings.json 에만 저장되고, 인터넷(GitHub)에는 올라가지 않습니다.")
     new = dict(cfg)
     new["google_api_key"] = st.text_input("구글 AI Studio 키", cfg["google_api_key"], type="password")
