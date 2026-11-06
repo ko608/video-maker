@@ -98,6 +98,24 @@ def cut_file(p, no):
     return None
 
 
+def make_thumbs(p, data, fmt):
+    """썸네일 A·B 만들기 — 재료 그림 중 선명한 장면 2개 사용"""
+    from PIL import Image as _I
+    assemble.set_format(fmt)
+    pics = sorted([x for x in (p / "재료").iterdir() if x.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")
+                   and "기준" not in x.name], key=lambda x: x.name)
+    def _px(x):
+        try:
+            w_, h_ = _I.open(x).size; return w_ * h_
+        except Exception:
+            return 0
+    big = max(pics, key=_px) if pics else None
+    mid = pics[len(pics) // 2] if len(pics) > 1 else big
+    if mid == big and pics:
+        mid = pics[-1]
+    return assemble.thumbnails(p, data.get("thumbnail", []), [big, mid], cfg)
+
+
 class Log:
     def __init__(self):
         self.box = st.empty(); self.lines = []
@@ -392,6 +410,19 @@ if page == "③ 완성 영상":
         missing = [int(c["no"]) for c in data["cuts"] if not cut_file(p, int(c["no"]))]
         if missing:
             st.warning(f"재료가 없는 컷: {missing} — ② 탭에서 채워 주세요.")
+        with st.expander("🖼 썸네일 문구 바꾸기 (영상은 그대로, 썸네일만 다시 만들어요 — 0원)"):
+            tl = (list(data.get("thumbnail", [])) + ["", ""])[:2]
+            t1 = st.text_input("윗줄 (흰 글씨, 10자 안팎)", tl[0], key=f"th1_{p.name}")
+            t2 = st.text_input("아랫줄 (노란 큰 글씨, 8자 안팎)", tl[1], key=f"th2_{p.name}")
+            if st.button("🖼 이 문구로 썸네일 다시 만들기", key="remake_th"):
+                data["thumbnail"] = [t1.strip(), t2.strip(), ""]
+                save_script(p, data)
+                try:
+                    with st.spinner("썸네일 만드는 중…"):
+                        make_thumbs(p, data, fmt)
+                    st.success("썸네일 A·B를 새로 만들었어요. 아래에서 확인하세요.")
+                except Exception as e:
+                    st.error(f"오류: {e}")
         with st.expander("✏️ 나레이션·자막 고치기 (고친 뒤 '영상 만들기'를 다시 누르면 반영돼요)"):
             st.caption("그림 컷: 나레이션 글을 고치면 목소리를 새로 만들어요(수십 원).  "
                        "대사 컷: 화면 자막만 바뀌어요 — 영상 속 실제 말소리는 영상을 다시 만들어야 바뀝니다.")
@@ -478,20 +509,7 @@ if page == "③ 완성 영상":
                     if rows:
                         rows[0] = "0:00 " + rows[0].split(" ", 1)[1]
                         chapters_txt = "\n\n[챕터 — 설명란에 그대로 붙이세요]\n" + "\n".join(rows)
-                # 썸네일 사진: 재료 폴더의 그림 중 가장 해상도 높은 원본
-                from PIL import Image as _I
-                pics = [x for x in (p / "재료").iterdir() if x.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")
-                        and "기준" not in x.name]
-                def _px(x):
-                    try:
-                        w_, h_ = _I.open(x).size; return w_ * h_
-                    except Exception:
-                        return 0
-                # A·B 썸네일에 서로 다른 장면 쓰기 (큰 그림 순 → 첫 장면 / 중간 장면)
-                pics.sort(key=lambda x: x.name)
-                big = max(pics, key=_px) if pics else None
-                mid = pics[len(pics) // 2] if len(pics) > 1 else big
-                assemble.thumbnails(p, data.get("thumbnail", []), [big, mid if mid != big else (pics[-1] if pics else None)], cfg)
+                make_thumbs(p, data, fmt)
                 info = (f"[제목]\n{data.get('title','')}\n\n[설명]\n{data.get('description','')}{chapters_txt}\n\n"
                         f"[태그]\n{data.get('tags','')}\n\n[고정 댓글]\n{data.get('pinned_comment','')}\n\n"
                         "※ 업로드할 때 '변경되거나 합성된 콘텐츠' 질문에 '예'를 체크하세요.\n")
