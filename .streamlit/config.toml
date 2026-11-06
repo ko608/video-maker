@@ -2,6 +2,8 @@
 toolbarMode = "minimal"
 [server]
 maxUploadSize = 500
+fileWatcherType = "none"
+runOnSave = false
 [browser]
 gatherUsageStats = false
 [theme]

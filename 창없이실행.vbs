@@ -2,4 +2,4 @@ Set sh = CreateObject("WScript.Shell")
 Set fs = CreateObject("Scripting.FileSystemObject")
 d = fs.GetParentFolderName(WScript.ScriptFullName)
 sh.CurrentDirectory = d
-sh.Run "cmd /c git pull -q & py -m pip install -q -U -r requirements.txt & py -m streamlit run app.py --server.port 8501", 0, False
+sh.Run "cmd /c git pull -q & py -m streamlit run app.py --server.port 8501", 0, False

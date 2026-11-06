@@ -29,6 +29,33 @@ st.caption(f"잘 되는 영상 링크 → 분석 → 우리식 대본 → 재료
 
 
 # ---------------- 도우미 ----------------
+@st.cache_data(show_spinner=False, max_entries=300)
+def _small(path_str, mtime, width=360):
+    """미리보기용 작은 그림 (원본 2K를 그대로 띄우면 컴퓨터가 무거워짐)"""
+    from PIL import Image as _I
+    import io
+    im = _I.open(path_str).convert("RGB")
+    im.thumbnail((width, width * 2))
+    b = io.BytesIO(); im.save(b, "JPEG", quality=80)
+    return b.getvalue()
+
+
+def show_small(box, path, caption=None):
+    path = Path(path)
+    box.image(_small(str(path), path.stat().st_mtime), caption=caption, width="stretch")
+
+
+def new_upload(key, up):
+    """같은 파일을 화면이 바뀔 때마다 다시 저장하지 않게"""
+    if up is None:
+        return False
+    sig = f"{up.name}:{up.size}"
+    if st.session_state.get("_up_" + key) == sig:
+        return False
+    st.session_state["_up_" + key] = sig
+    return True
+
+
 def channels():
     out = {}
     for f in sorted(config.CHANNELS.glob("*.json")):
@@ -195,10 +222,10 @@ with tab2:
             except Exception as e:
                 st.error(f"오류: {e}")
         upr = rc1.file_uploader("또는 플로우에서 만든 인물 그림 올리기", type=["png", "jpg", "jpeg", "webp"], key="ref_up")
-        if upr is not None:
+        if new_upload(f"{p.name}_ref", upr):
             ref.write_bytes(upr.getbuffer())
         if ref.exists():
-            rc2.image(str(ref), caption="인물 기준 그림", width="stretch")
+            show_small(rc2, ref, caption="인물 기준 그림")
             rc2.download_button("⬇ 기준 그림 받기 (플로우에 넣기)", ref.read_bytes(), file_name="인물기준.png",
                                 mime="image/png", key="dl_ref")
         st.divider()
@@ -298,7 +325,7 @@ with tab2:
                         + f"등장인물: {data.get('characters','')}")
             m.text_area("플로우에 넣을 문구 (복사) — 맨 위가 이 컷만의 장면", flow, height=170, key=f"flow{no}")
             up = m.file_uploader("플로우에서 받은 파일 올리기", type=["png", "jpg", "jpeg", "webp", "mp4", "mov"], key=f"up{no}")
-            if up is not None:
+            if new_upload(f"{p.name}_{no}", up):
                 for old in (p / "재료").glob(f"{no:02d}.*"):
                     old.unlink()
                 ext = Path(up.name).suffix.lower()
@@ -306,15 +333,17 @@ with tab2:
                 f = cut_file(p, no)
             if f:
                 if f.suffix.lower() in (".mp4", ".mov"):
-                    r.video(str(f))
+                    r.success(f"🎬 영상 있음 ({f.name})")
+                    if r.checkbox("▶ 재생해 보기", key=f"play{no}"):
+                        r.video(str(f))
                 else:
-                    r.image(str(f), width="stretch")
+                    show_small(r, f)
                 if r.button("🗑 이 재료 지우기", key=f"del{no}"):
                     f.unlink(); st.rerun()
             else:
                 still = p / "재료" / f"{no:02d}_첫장면.png"
                 if c["kind"] == "video" and still.exists():
-                    r.image(str(still), caption="첫 장면 그림 (플로우 시작 이미지)", width="stretch")
+                    show_small(r, still, caption="첫 장면 그림 (플로우 시작 이미지)")
                     r.download_button("⬇ 첫 장면 그림 받기", still.read_bytes(), file_name=f"컷{no}_첫장면.png",
                                       mime="image/png", key=f"dl{no}")
                     r.warning("대사 영상을 플로우에서 만들어 올려 주세요")
