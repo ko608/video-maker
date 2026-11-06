@@ -487,8 +487,11 @@ if page == "③ 완성 영상":
                         w_, h_ = _I.open(x).size; return w_ * h_
                     except Exception:
                         return 0
-                photo = max(pics, key=_px) if pics else None
-                assemble.thumbnail(p, data.get("thumbnail", []), photo, cfg)
+                # A·B 썸네일에 서로 다른 장면 쓰기 (큰 그림 순 → 첫 장면 / 중간 장면)
+                pics.sort(key=lambda x: x.name)
+                big = max(pics, key=_px) if pics else None
+                mid = pics[len(pics) // 2] if len(pics) > 1 else big
+                assemble.thumbnails(p, data.get("thumbnail", []), [big, mid if mid != big else (pics[-1] if pics else None)], cfg)
                 info = (f"[제목]\n{data.get('title','')}\n\n[설명]\n{data.get('description','')}{chapters_txt}\n\n"
                         f"[태그]\n{data.get('tags','')}\n\n[고정 댓글]\n{data.get('pinned_comment','')}\n\n"
                         "※ 업로드할 때 '변경되거나 합성된 콘텐츠' 질문에 '예'를 체크하세요.\n")
@@ -500,8 +503,11 @@ if page == "③ 완성 영상":
         if fin.exists():
             a, b = st.columns([2, 3])
             a.video(str(fin))
-            if (p / "썸네일.jpg").exists():
-                a.image(str(p / "썸네일.jpg"), caption="썸네일", width=260)
+            for nm, cap in (("썸네일_A.jpg", "썸네일 A — 글씨 아래"), ("썸네일_B.jpg", "썸네일 B — 다른 장면/글씨판")):
+                if (p / nm).exists():
+                    show_small(a, p / nm, caption=cap)
+            if (p / "썸네일_A.jpg").exists():
+                a.caption("두 개 다 올려 두고, 유튜브 '테스트 및 비교'로 더 잘 되는 쪽을 고르세요.")
             if (p / "업로드정보.txt").exists():
                 b.text_area("업로드 정보 (복사해서 쓰세요)", (p / "업로드정보.txt").read_text(encoding="utf-8"), height=420)
             if b.button("📂 완성 폴더 열기"):

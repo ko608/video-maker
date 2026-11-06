@@ -193,7 +193,7 @@ def assemble(project: Path, cuts, cfg, music=None, log=print, durs=None):
 
 
 # ---------------- 썸네일 (사진 꽉 차게 + 큰 글씨 겹치기) ----------------
-def thumbnail_wide(project: Path, lines, photo, cfg):
+def thumbnail_wide(project: Path, lines, photo, cfg, out_name="썸네일_A.jpg"):
     """롱폼(가로) 썸네일: 사진 꽉 차게, 글씨는 얼굴 아래(화면 아래쪽)에 흰·노란 큰 글씨 2줄"""
     font_path = cfg["font_path"]
     f = lambda sz: ImageFont.truetype(font_path, sz)
@@ -233,14 +233,88 @@ def thumbnail_wide(project: Path, lines, photo, cfg):
     if L[1]:
         w_ = d.textlength(L[1], font=f(s2))
         d.text(((TW - w_) / 2, y2), L[1], font=f(s2), fill=(255, 225, 0), stroke_width=12, stroke_fill="black")
-    out = project / "썸네일.jpg"
+    out = project / out_name
     img.save(out, quality=95, subsampling=0)
     return out
 
 
+def thumbnail_panel(project: Path, lines, photo, cfg, out_name="썸네일_B.jpg"):
+    """롱폼(가로) 썸네일: 왼쪽 밝은 황금색 글씨판 + 오른쪽 장면 사진"""
+    font_path = cfg["font_path"]
+    f = lambda sz: ImageFont.truetype(font_path, sz)
+    TW, TH = 1280, 720
+    PW = 460                                   # 왼쪽 글씨판 너비 (사진 넓게)
+    img = Image.new("RGB", (TW, TH))
+    d = ImageDraw.Draw(img)
+    for xx in range(PW + 40):                  # 밝은 황금색 → 연노랑
+        t = xx / (PW + 40)
+        d.line([(xx, 0), (xx, TH)], fill=(255, int(200 + 40 * t), int(40 + 120 * t)))
+    if photo and Path(photo).exists():
+        ph = Image.open(photo).convert("RGB")
+        RW = TW - PW
+        sc = max(RW / ph.width, TH / ph.height)
+        ph = ph.resize((int(ph.width * sc) + 1, int(ph.height * sc) + 1), Image.LANCZOS)
+        x = (ph.width - RW) // 2
+        y = int((ph.height - TH) * 0.3)
+        img.paste(ph.crop((x, y, x + RW, y + TH)), (PW, 0))
+        d = ImageDraw.Draw(img)
+        d.rectangle([PW - 6, 0, PW + 2, TH], fill=(220, 30, 30))   # 빨간 경계선
+
+    def wrap(s, size, maxw):
+        words, out, cur = s.split(), [], ""
+        for w_ in words:
+            t = (cur + " " + w_).strip()
+            if cur and d.textlength(t, font=f(size)) > maxw:
+                out.append(cur); cur = w_
+            else:
+                cur = t
+        if cur:
+            out.append(cur)
+        return out
+
+    L = (list(lines) + ["", "", ""])[:3]
+    # 글자는 적게: 작은 윗줄 + 크고 빨간 핵심 한 줄 (3번째 줄은 뺌)
+    spec = [(L[0], 58, (30, 30, 30), "white", 6), (L[1], 130, (225, 25, 25), "white", 11)]
+    blocks = []
+    for txt, size, fill, sf, st_ in spec:
+        if not txt:
+            continue
+        rows = wrap(txt, size, PW - 75)
+        while size > 36 and (len(rows) > 2 or max(d.textlength(r, font=f(size)) for r in rows) > PW - 60):
+            size -= 6; rows = wrap(txt, size, PW - 75)
+        blocks.append((rows, size, fill, sf, st_))
+    total = sum(len(r) * (sz + 12) for r, sz, *_ in blocks) + 30 * (len(blocks) - 1)
+    y = max(20, (TH - total) // 2)
+    for rows, size, fill, sf, st_ in blocks:
+        for r in rows:
+            d.text((30, y), r, font=f(size), fill=fill, stroke_width=st_, stroke_fill=sf)
+            y += size + 12
+        y += 30
+    out = project / out_name
+    img.save(out, quality=95, subsampling=0)
+    return out
+
+
+
+
+def thumbnails(project: Path, lines, photos, cfg):
+    """썸네일 2가지: A(글씨 아래) · B(롱폼=왼쪽 글씨판 / 쇼츠=다른 장면) — 대표 썸네일.jpg는 A"""
+    import shutil
+    photos = [x for x in (photos or []) if x] or [None]
+    pa, pb = photos[0], (photos[1] if len(photos) > 1 else photos[0])
+    if W > H:
+        a = thumbnail_wide(project, lines, pa, cfg, "썸네일_A.jpg")
+        b = thumbnail_panel(project, lines, pb, cfg, "썸네일_B.jpg")
+    else:
+        a = thumbnail(project, lines, pa, cfg); shutil.copy(a, project / "썸네일_A.jpg"); a = project / "썸네일_A.jpg"
+        b0 = thumbnail(project, lines, pb, cfg); b = project / "썸네일_B.jpg"; shutil.copy(b0, b)
+    shutil.copy(a, project / "썸네일.jpg")
+    return a, b
+
+
 def thumbnail(project: Path, lines, photo, cfg):
     if W > H:
-        return thumbnail_wide(project, lines, photo, cfg)
+        return thumbnail_wide(project, lines, photo, cfg, "썸네일.jpg")
     font_path = cfg["font_path"]
     f = lambda sz: ImageFont.truetype(font_path, sz)
     img = None
