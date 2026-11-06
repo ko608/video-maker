@@ -194,57 +194,45 @@ def assemble(project: Path, cuts, cfg, music=None, log=print, durs=None):
 
 # ---------------- 썸네일 (사진 꽉 차게 + 큰 글씨 겹치기) ----------------
 def thumbnail_wide(project: Path, lines, photo, cfg):
-    """롱폼(가로) 썸네일: 왼쪽 밝은 황금색 글씨판 + 오른쪽 장면 사진"""
+    """롱폼(가로) 썸네일: 사진 꽉 차게, 글씨는 얼굴 아래(화면 아래쪽)에 흰·노란 큰 글씨 2줄"""
     font_path = cfg["font_path"]
     f = lambda sz: ImageFont.truetype(font_path, sz)
     TW, TH = 1280, 720
-    PW = 460                                   # 왼쪽 글씨판 너비 (사진 넓게)
-    img = Image.new("RGB", (TW, TH))
-    d = ImageDraw.Draw(img)
-    for xx in range(PW + 40):                  # 밝은 황금색 → 연노랑
-        t = xx / (PW + 40)
-        d.line([(xx, 0), (xx, TH)], fill=(255, int(200 + 40 * t), int(40 + 120 * t)))
     if photo and Path(photo).exists():
         ph = Image.open(photo).convert("RGB")
-        RW = TW - PW
-        sc = max(RW / ph.width, TH / ph.height)
+        sc = max(TW / ph.width, TH / ph.height)
         ph = ph.resize((int(ph.width * sc) + 1, int(ph.height * sc) + 1), Image.LANCZOS)
-        x = (ph.width - RW) // 2
-        y = int((ph.height - TH) * 0.3)
-        img.paste(ph.crop((x, y, x + RW, y + TH)), (PW, 0))
-        d = ImageDraw.Draw(img)
-        d.rectangle([PW - 6, 0, PW + 2, TH], fill=(220, 30, 30))   # 빨간 경계선
+        x = (ph.width - TW) // 2
+        y = int((ph.height - TH) * 0.2)          # 얼굴이 있는 위쪽을 살림
+        img = ph.crop((x, y, x + TW, y + TH))
+    else:
+        img = Image.new("RGB", (TW, TH), (255, 214, 90))
+    # 아래쪽만 살짝 어둡게 → 글씨 또렷, 얼굴은 밝게 그대로
+    shade = Image.new("RGBA", (TW, TH), (0, 0, 0, 0))
+    ds = ImageDraw.Draw(shade)
+    top = int(TH * 0.5)
+    for yy in range(top, TH):
+        a_ = int(170 * ((yy - top) / (TH - top)) ** 1.3)
+        ds.line([(0, yy), (TW, yy)], fill=(0, 0, 0, a_))
+    img = Image.alpha_composite(img.convert("RGBA"), shade).convert("RGB")
+    d = ImageDraw.Draw(img)
 
-    def wrap(s, size, maxw):
-        words, out, cur = s.split(), [], ""
-        for w_ in words:
-            t = (cur + " " + w_).strip()
-            if cur and d.textlength(t, font=f(size)) > maxw:
-                out.append(cur); cur = w_
-            else:
-                cur = t
-        if cur:
-            out.append(cur)
-        return out
+    def fit(s_, size):
+        while size > 40 and d.textlength(s_, font=f(size)) > TW - 60:
+            size -= 4
+        return size
 
-    L = (list(lines) + ["", "", ""])[:3]
-    # 글자는 적게: 작은 윗줄 + 크고 빨간 핵심 한 줄 (3번째 줄은 뺌)
-    spec = [(L[0], 58, (30, 30, 30), "white", 6), (L[1], 130, (225, 25, 25), "white", 11)]
-    blocks = []
-    for txt, size, fill, sf, st_ in spec:
-        if not txt:
-            continue
-        rows = wrap(txt, size, PW - 75)
-        while size > 36 and (len(rows) > 2 or max(d.textlength(r, font=f(size)) for r in rows) > PW - 60):
-            size -= 6; rows = wrap(txt, size, PW - 75)
-        blocks.append((rows, size, fill, sf, st_))
-    total = sum(len(r) * (sz + 12) for r, sz, *_ in blocks) + 30 * (len(blocks) - 1)
-    y = max(20, (TH - total) // 2)
-    for rows, size, fill, sf, st_ in blocks:
-        for r in rows:
-            d.text((30, y), r, font=f(size), fill=fill, stroke_width=st_, stroke_fill=sf)
-            y += size + 12
-        y += 30
+    L = [x_ for x_ in (list(lines) + ["", ""])[:2]]
+    s2 = fit(L[1], 118) if L[1] else 0
+    s1 = fit(L[0], 92) if L[0] else 0
+    y2 = TH - s2 - 58
+    y1 = y2 - s1 - 22
+    if L[0]:
+        w_ = d.textlength(L[0], font=f(s1))
+        d.text(((TW - w_) / 2, y1), L[0], font=f(s1), fill="white", stroke_width=10, stroke_fill="black")
+    if L[1]:
+        w_ = d.textlength(L[1], font=f(s2))
+        d.text(((TW - w_) / 2, y2), L[1], font=f(s2), fill=(255, 225, 0), stroke_width=12, stroke_fill="black")
     out = project / "썸네일.jpg"
     img.save(out, quality=95, subsampling=0)
     return out
