@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
+_T0 = time.time()
 
 sys.path.insert(0, str(Path(__file__).parent))
 from vm import config, ai, assemble  # noqa: E402
@@ -18,6 +19,7 @@ h1,h2,h3{color:#5E1813}
 .stButton>button{font-size:18px;font-weight:700}
 </style>""", unsafe_allow_html=True)
 st.title("🎬 영상 자판기")
+@st.cache_resource(show_spinner=False)
 def _version():
     try:
         import subprocess
@@ -107,6 +109,7 @@ class Log:
 PAGES = ["① 분석·대본", "② 재료 만들기", "③ 완성 영상", "⚙️ 설정"]
 page = st.radio("화면", PAGES, horizontal=True, label_visibility="collapsed", key="page")
 st.divider()
+_T1 = time.time()
 
 # ================= ① 분석·대본 =================
 if page == "① 분석·대본":
@@ -535,3 +538,7 @@ if page == "⚙️ 설정":
             st.code("\n".join(m for m in ms if any(k in m for k in ["gemini", "veo", "imagen", "tts", "omni"])))
         except Exception as e:
             st.error(f"연결 실패: {e}")
+
+# ---- 느린 곳 찾기용: 화면 하나 그리는 데 걸린 시간 ----
+st.divider()
+st.caption(f"⏱ 이 화면 준비 {(_T1 - _T0):.1f}초 + 그리기 {(time.time() - _T1):.1f}초  (느리면 이 숫자를 Claude에게 알려 주세요)")
