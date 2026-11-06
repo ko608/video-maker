@@ -7,6 +7,12 @@ from PIL import Image, ImageDraw, ImageFont
 W, H, FPS = 1080, 1920, 30
 
 
+def thumb_font(cfg):
+    """썸네일은 아주 굵은 글씨(Noto Sans KR Black)로 — 프로그램 폴더에 같이 들어 있음"""
+    f = Path(__file__).resolve().parent.parent / "fonts" / "NotoSansKR-Black-subset.otf"
+    return str(f) if f.exists() else cfg["font_path"]
+
+
 def set_format(fmt):
     """shorts = 세로 1080x1920, longform = 가로 1920x1080"""
     global W, H, FPS
@@ -195,7 +201,7 @@ def assemble(project: Path, cuts, cfg, music=None, log=print, durs=None):
 # ---------------- 썸네일 (사진 꽉 차게 + 큰 글씨 겹치기) ----------------
 def thumbnail_wide(project: Path, lines, photo, cfg, out_name="썸네일_A.jpg"):
     """롱폼(가로) 썸네일: 사진 꽉 차게, 글씨는 얼굴 아래(화면 아래쪽)에 흰·노란 큰 글씨 2줄"""
-    font_path = cfg["font_path"]
+    font_path = thumb_font(cfg)
     f = lambda sz: ImageFont.truetype(font_path, sz)
     TW, TH = 1280, 720
     if photo and Path(photo).exists():
@@ -240,7 +246,7 @@ def thumbnail_wide(project: Path, lines, photo, cfg, out_name="썸네일_A.jpg")
 
 def thumbnail_panel(project: Path, lines, photo, cfg, out_name="썸네일_B.jpg"):
     """롱폼(가로) 썸네일: 왼쪽 밝은 황금색 글씨판 + 오른쪽 장면 사진"""
-    font_path = cfg["font_path"]
+    font_path = thumb_font(cfg)
     f = lambda sz: ImageFont.truetype(font_path, sz)
     TW, TH = 1280, 720
     PW = 460                                   # 왼쪽 글씨판 너비 (사진 넓게)
@@ -299,7 +305,7 @@ def thumbnail_panel(project: Path, lines, photo, cfg, out_name="썸네일_B.jpg"
 
 def thumbnail_tall_low(project: Path, lines, photo, cfg, out_name="썸네일_A.jpg"):
     """쇼츠(세로) 썸네일 A: 사진 꽉 차게, 얼굴 아래(화면 60~80% 높이)에 흰·노란 큰 글씨 2줄"""
-    font_path = cfg["font_path"]
+    font_path = thumb_font(cfg)
     f = lambda sz: ImageFont.truetype(font_path, sz)
     TW, TH = 1080, 1920
     if photo and Path(photo).exists():
@@ -359,7 +365,7 @@ def thumbnails(project: Path, lines, photos, cfg):
 def thumbnail(project: Path, lines, photo, cfg):
     if W > H:
         return thumbnail_wide(project, lines, photo, cfg, "썸네일.jpg")
-    font_path = cfg["font_path"]
+    font_path = thumb_font(cfg)
     f = lambda sz: ImageFont.truetype(font_path, sz)
     img = None
     if photo and Path(photo).exists() and Path(photo).suffix.lower() in (".png", ".jpg", ".jpeg", ".webp"):
