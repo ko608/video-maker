@@ -297,6 +297,50 @@ def thumbnail_panel(project: Path, lines, photo, cfg, out_name="썸네일_B.jpg"
 
 
 
+def thumbnail_tall_low(project: Path, lines, photo, cfg, out_name="썸네일_A.jpg"):
+    """쇼츠(세로) 썸네일 A: 사진 꽉 차게, 얼굴 아래(화면 60~80% 높이)에 흰·노란 큰 글씨 2줄"""
+    font_path = cfg["font_path"]
+    f = lambda sz: ImageFont.truetype(font_path, sz)
+    TW, TH = 1080, 1920
+    if photo and Path(photo).exists():
+        ph = Image.open(photo).convert("RGB")
+        sc = max(TW / ph.width, TH / ph.height)
+        ph = ph.resize((int(ph.width * sc) + 1, int(ph.height * sc) + 1), Image.LANCZOS)
+        x = (ph.width - TW) // 2
+        y = int((ph.height - TH) * 0.2)
+        img = ph.crop((x, y, x + TW, y + TH))
+    else:
+        img = Image.new("RGB", (TW, TH), (255, 214, 90))
+    shade = Image.new("RGBA", (TW, TH), (0, 0, 0, 0))
+    ds = ImageDraw.Draw(shade)
+    top = int(TH * 0.5)
+    for yy in range(top, TH):
+        a_ = int(160 * min(1, (yy - top) / (TH * 0.3)) ** 1.2)
+        ds.line([(0, yy), (TW, yy)], fill=(0, 0, 0, a_))
+    img = Image.alpha_composite(img.convert("RGBA"), shade).convert("RGB")
+    d = ImageDraw.Draw(img)
+
+    def fit(s_, size):
+        while size > 50 and d.textlength(s_, font=f(size)) > TW - 60:
+            size -= 4
+        return size
+
+    L = (list(lines) + ["", ""])[:2]
+    s1 = fit(L[0], 112) if L[0] else 0
+    s2 = fit(L[1], 150) if L[1] else 0
+    y1 = int(TH * 0.62)
+    if L[0]:
+        w_ = d.textlength(L[0], font=f(s1))
+        d.text(((TW - w_) / 2, y1), L[0], font=f(s1), fill="white", stroke_width=12, stroke_fill="black")
+    if L[1]:
+        y2 = y1 + (s1 + 34 if L[0] else 0)
+        w_ = d.textlength(L[1], font=f(s2))
+        d.text(((TW - w_) / 2, y2), L[1], font=f(s2), fill=(255, 225, 0), stroke_width=14, stroke_fill="black")
+    out = project / out_name
+    img.save(out, quality=95, subsampling=0)
+    return out
+
+
 def thumbnails(project: Path, lines, photos, cfg):
     """썸네일 2가지: A(글씨 아래) · B(롱폼=왼쪽 글씨판 / 쇼츠=다른 장면) — 대표 썸네일.jpg는 A"""
     import shutil
@@ -306,8 +350,8 @@ def thumbnails(project: Path, lines, photos, cfg):
         a = thumbnail_wide(project, lines, pa, cfg, "썸네일_A.jpg")
         b = thumbnail_panel(project, lines, pb, cfg, "썸네일_B.jpg")
     else:
-        a = thumbnail(project, lines, pa, cfg); shutil.copy(a, project / "썸네일_A.jpg"); a = project / "썸네일_A.jpg"
-        b0 = thumbnail(project, lines, pb, cfg); b = project / "썸네일_B.jpg"; shutil.copy(b0, b)
+        a = thumbnail_tall_low(project, lines, pa, cfg, "썸네일_A.jpg")          # 얼굴 아래 글씨
+        b0 = thumbnail(project, lines, pb, cfg); b = project / "썸네일_B.jpg"; shutil.copy(b0, b)   # 위쪽 글씨 + 다른 장면
     shutil.copy(a, project / "썸네일.jpg")
     return a, b
 
