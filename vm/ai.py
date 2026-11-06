@@ -358,9 +358,44 @@ def _omni_video(client, cfg, prompt, first_frame, out_path, aspect, log):
 
 
 # ---------------- 5. 나레이션 목소리 ----------------
+def _tts_interactions(client, cfg, model, text, out_wav):
+    """구글 새 목소리 방식(Interactions API, gemini-3.8 TTS) — 말투는 '지시'가 아니라 꼬리표로 붙여서 읽지 않음"""
+    content = {"type": "text", "text": text}
+    style = (cfg.get("tts_style") or "").strip()
+    if style:
+        content["annotations"] = [{"type": "speech_metadata", "style": style}]
+    it = client.interactions.create(
+        model=model,
+        input=[{"type": "user_input", "content": [content]}],
+        response_format={"type": "audio"},
+        generation_config={"speech_config": [{"voice": cfg.get("tts_voice", "Kore")}]},
+    )
+    data = it.output_audio.data
+    data = base64.b64decode(data) if isinstance(data, str) else data
+    if data[:4] != b"RIFF":           # 혹시 날것 소리로 오면 wav로 감싸기
+        if len(data) % 2:
+            data = data[:-1]
+        with wave.open(str(out_wav), "wb") as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(data)
+    else:
+        Path(out_wav).write_bytes(data)
+    return out_wav
+
+
 def make_tts(cfg, text, out_wav):
     from google.genai import types
     client = _gclient(cfg)
+    # 1순위: 새 방식 (3.8 TTS)
+    if hasattr(client, "interactions"):
+        try:
+            return _with_retry(lambda m: _tts_interactions(client, cfg, m, text, out_wav),
+                               [m for m in [cfg.get("gemini_tts_model"), "gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts"]
+                                if m and "3.8" in m] or ["gemini-3.8-flash-tts"])
+        except Exception as e:
+            if "한도" in str(e) or "quota" in str(e).lower():
+                raise
+            # 아래 예전 방식으로 한 번 더 시도
+    # 2순위: 예전 방식
     voice = types.SpeechConfig(voice_config=types.VoiceConfig(
         prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=cfg.get("tts_voice", "Kore"))))
     style = (cfg.get("tts_style") or "").strip()
