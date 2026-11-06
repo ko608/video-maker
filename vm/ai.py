@@ -203,6 +203,21 @@ def write_script(cfg, channel, analysis="", topic=""):
     return data
 
 
+# ---------------- 2-1. 한 단어 → 주제 후보 ----------------
+def suggest_topics(cfg, channel, keyword):
+    prompt = f"""당신은 조회수가 잘 나오는 한국 유튜브 스토리 작가입니다.
+[채널] {channel['name']}
+[채널 규칙]
+{chr(10).join('- ' + r for r in channel['rules'])}
+
+키워드: "{keyword or '자유'}"
+이 키워드로 시청자가 끝까지 볼 이야기 주제 4개를 만드세요. 서로 완전히 다른 이야기로(감동·갈등·진상 등 섞기).
+아래 JSON 하나만 출력하세요.
+{{"ideas": [{{"title": "주제 제목(20자 안팎, 궁금증 생기게)", "twist": "핵심 반전 한 줄(30자 안팎)"}}]}}"""
+    data = _json_from(_claude(cfg, prompt, max_tokens=1500))
+    return data.get("ideas", [])[:4]
+
+
 # ---------------- 3. 이미지 (나노바나나) ----------------
 def make_image(cfg, prompt, out_path, aspect="9:16", ref=None):
     """ref: 등장인물 기준 그림 — 넣으면 모든 컷에서 같은 사람으로 그림"""

@@ -84,7 +84,26 @@ with tab1:
     ch_name = st.selectbox("우리 채널", list(chs))
     ch = chs[ch_name]
     url = st.text_input("잘 되는 영상 유튜브 링크 (없으면 비워 두고 아래 주제만 써도 됩니다)")
-    topic = st.text_area("주제·메모 (선택)", placeholder="예: 시어머니가 며느리 몰래 들어 둔 보험. 돈 + 사주 반전", height=80)
+    # ---- 💡 한 단어 → 주제 후보 3~4개 뽑기 ----
+    k1, k2 = st.columns([3, 1])
+    kw = k1.text_input("💡 한 단어만 넣어도 주제를 뽑아 드려요", placeholder="예: 국밥, 보험, 반찬, 진상, 김장")
+    k2.write(""); k2.write("")
+    if k2.button("주제 뽑기", width="stretch"):
+        try:
+            with st.spinner("주제 후보 만드는 중…"):
+                st.session_state["ideas"] = ai.suggest_topics(cfg, ch, kw)
+        except Exception as e:
+            st.error(f"오류: {e}")
+    ideas = st.session_state.get("ideas") or []
+    if ideas:
+        pick = st.radio("마음에 드는 주제를 고르세요 (고르면 아래 '주제·메모' 칸에 들어가요)",
+                        ["(고르지 않음)"] + [f"{i['title']} — {i['twist']}" for i in ideas], key="idea_pick")
+        if pick != "(고르지 않음)" and st.session_state.get("_last_pick") != pick:
+            st.session_state["_last_pick"] = pick
+            it = ideas[[f"{i['title']} — {i['twist']}" for i in ideas].index(pick)]
+            st.session_state["topic_box"] = f"{it['title']}. 반전: {it['twist']}"
+    topic = st.text_area("주제·메모 (선택)", placeholder="예: 시어머니가 며느리 몰래 들어 둔 보험. 돈 + 사주 반전",
+                         height=80, key="topic_box")
 
     c1, c2 = st.columns(2)
     if c1.button("🔍 분석하고 대본 만들기", type="primary", width="stretch"):
