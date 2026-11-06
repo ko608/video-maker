@@ -238,9 +238,29 @@ if page == "② 재료 만들기":
         colA.caption("둘 다 끄면: 그림 컷(2·4·6)만 만들어요. 대사 컷은 플로우에서 만들어 올리세요 (가장 저렴)")
         if colB.button("⚡ 빠진 재료 전부 자동으로 만들기", type="primary", width="stretch"):
             log = Log()
+            # 그림 컷은 4장씩 동시에 만들기 (한 장씩 차례로 하면 너무 오래 걸림)
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            jobs = {}
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                for c in data["cuts"]:
+                    no = int(c["no"])
+                    if c["kind"] != "image" or cut_file(p, no):
+                        continue
+                    base = (f"Scene {no}: {c['visual']}. Style: {style}. Characters: {data.get('characters','')}. "
+                            "Ordinary everyday Korean people with average, natural faces, light natural makeup, "
+                            "realistic skin texture")
+                    jobs[pool.submit(ai.make_image, cfg, base, p / "재료" / f"{no:02d}.png", aspect, ref)] = no
+                log(f"그림 {len(jobs)}장을 4장씩 동시에 만드는 중…")
+                done_n = 0
+                for fu in as_completed(jobs):
+                    done_n += 1
+                    try:
+                        fu.result(); log(f"  ✔ 컷 {jobs[fu]} 완료 ({done_n}/{len(jobs)})")
+                    except Exception as e:
+                        log(f"  ✖ 컷 {jobs[fu]} 실패: {e}")
             for c in data["cuts"]:
                 no = int(c["no"])
-                if cut_file(p, no):
+                if cut_file(p, no) or c["kind"] == "image":
                     continue
                 base = (f"Scene {no}: {c['visual']}. Style: {style}. Characters: {data.get('characters','')}. "
                         "Ordinary everyday Korean people with average, natural faces, light natural makeup, "
@@ -405,6 +425,20 @@ if page == "③ 완성 영상":
         if st.button("🎬 영상 만들기", type="primary", disabled=bool(missing), width="stretch"):
             log = Log()
             try:
+                # 나레이션 목소리를 4개씩 동시에 미리 만들기
+                from concurrent.futures import ThreadPoolExecutor, as_completed
+                (p / "work").mkdir(exist_ok=True)
+                need = [c for c in data["cuts"] if c["kind"] == "image" and c.get("narration")
+                        and not (own_voice and list((p / "재료").glob(f"{int(c['no']):02d}_나레이션.*")))
+                        and not (p / "work" / f"voice2_{int(c['no']):02d}.wav").exists()]
+                if need:
+                    log(f"나레이션 목소리 {len(need)}개를 동시에 만드는 중…")
+                    with ThreadPoolExecutor(max_workers=4) as pool:
+                        futs = {pool.submit(ai.make_tts, cfg, c["narration"], p / "work" / f"voice2_{int(c['no']):02d}.wav"): c["no"] for c in need}
+                        k = 0
+                        for fu in as_completed(futs):
+                            k += 1
+                            fu.result(); log(f"  ✔ 목소리 {futs[fu]} ({k}/{len(need)})")
                 cuts = []
                 for c in data["cuts"]:
                     no = int(c["no"])

@@ -9,8 +9,9 @@ W, H, FPS = 1080, 1920, 30
 
 def set_format(fmt):
     """shorts = 세로 1080x1920, longform = 가로 1920x1080"""
-    global W, H
+    global W, H, FPS
     W, H = (1920, 1080) if fmt == "longform" else (1080, 1920)
+    FPS = 15 if fmt == "longform" else 30    # 롱폼은 그림만 나와서 15프레임이면 충분 (편집 2배 빠름)
 
 
 def ffmpeg_exe():
@@ -111,10 +112,13 @@ def build_segment(work: Path, idx, cut, cfg, log=print):
     else:
         frames = int(dur * FPS)
         args += ["-loop", "1", "-framerate", str(FPS), "-t", f"{dur:.2f}", "-i", str(media)]
-        ZW, ZH = int(W * 1.25) // 2 * 2, int(H * 1.25) // 2 * 2
-        filt.append(f"[0:v]scale={ZW}:{ZH}:force_original_aspect_ratio=increase,crop={ZW}:{ZH},"
-                    f"zoompan=z='min(zoom+{0.13 / max(frames, 1):.6f},1.15)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={W}x{H}:fps={FPS},"
-                    f"setsar=1[v0]")
+        if cfg.get("image_motion", False):     # 천천히 확대 (느림)
+            ZW, ZH = int(W * 1.25) // 2 * 2, int(H * 1.25) // 2 * 2
+            filt.append(f"[0:v]scale={ZW}:{ZH}:force_original_aspect_ratio=increase,crop={ZW}:{ZH},"
+                        f"zoompan=z='min(zoom+{0.13 / max(frames, 1):.6f},1.15)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={W}x{H}:fps={FPS},"
+                        f"setsar=1[v0]")
+        else:                                   # 고정 그림 (훨씬 빠름)
+            filt.append(f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS},setsar=1[v0]")
     n_in = 1
     # 오디오 입력
     if audio:
@@ -138,7 +142,8 @@ def build_segment(work: Path, idx, cut, cfg, log=print):
         filt.append(f"[{last}][{n_in}:v]overlay=0:0:enable='between(t,{a:.2f},{b:.2f})'[{nxt}]")
         last = nxt; n_in += 1
     args += ["-filter_complex", ";".join(filt), "-map", f"[{last}]", "-map", "[a0]",
-             "-t", f"{dur:.2f}", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
+             "-t", f"{dur:.2f}", "-c:v", "libx264", "-preset", "superfast", "-crf", "21", "-pix_fmt", "yuv420p",
+             *(["-tune", "stillimage"] if not is_video and not cfg.get("image_motion", False) else []),
              "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2", str(seg)]
     log(f"  장면 {idx} 편집 중 ({dur:.1f}초)")
     run(args)
@@ -149,12 +154,22 @@ def build_segment(work: Path, idx, cut, cfg, log=print):
 def assemble(project: Path, cuts, cfg, music=None, log=print, durs=None):
     work = project / "work"
     work.mkdir(exist_ok=True)
-    segs = []
-    for i, c in enumerate(cuts, 1):
-        seg, d_ = build_segment(work, i, c, cfg, log)
-        segs.append(seg)
-        if durs is not None:
-            durs.append(d_)
+    # 장면들을 여러 개 동시에 편집 (컴퓨터 코어 수에 맞춰)
+    import os
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    workers = max(1, min(4, (os.cpu_count() or 2) // 2))
+    log(f"  장면 {len(cuts)}개를 {workers}개씩 동시에 편집하는 중…")
+    results = [None] * len(cuts)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futs = {pool.submit(build_segment, work, i, c, cfg, lambda m: None): i for i, c in enumerate(cuts, 1)}
+        k = 0
+        for fu in as_completed(futs):
+            k += 1
+            results[futs[fu] - 1] = fu.result()
+            log(f"  ✔ 장면 편집 {k}/{len(cuts)}")
+    segs = [r[0] for r in results]
+    if durs is not None:
+        durs.extend(r[1] for r in results)
     lst = work / "list.txt"
     lst.write_text("".join(f"file '{s.name}'\n" for s in segs), encoding="utf-8")
     joined = work / "joined.mp4"
