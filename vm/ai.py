@@ -39,6 +39,7 @@ def _with_retry(fn, models):
     """구글이 '사용자 많음(503)'일 때 잠깐 쉬었다 다시, 그래도 안 되면 다른 모델로."""
     last = None
     seen = []
+    errs = {}
     for m in models:
         if not m or m in seen:
             continue
@@ -51,6 +52,7 @@ def _with_retry(fn, models):
             except Exception as e:
                 last = e
                 msg = str(e)
+                errs[m] = msg[:160]
                 if "exceeded your current quota" in msg or "billing" in msg:
                     if "limit: 0" in msg or "free_tier" in msg.lower():
                         raise RuntimeError("구글 무료 한도로는 이 기능(그림·목소리)을 쓸 수 없어요. AI Studio에서 결제(Billing)를 켜거나, 플로우에서 만들어 올려 주세요.")
@@ -70,7 +72,8 @@ def _with_retry(fn, models):
                     break  # 이 모델은 못 씀 → 바로 다음 모델로
                 if not any(k in msg for k in ("503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "overloaded", "500")):
                     raise
-    raise RuntimeError("구글 모델을 쓸 수 없어요(바쁘거나 막힘). 몇 분 뒤 다시 눌러 주세요. 계속되면 이 화면을 Claude에게 보내 주세요. (" + str(last)[:150] + ")")
+    raise RuntimeError("구글 모델을 쓸 수 없어요(바쁘거나 막힘). 몇 분 뒤 다시 눌러 주세요. 계속되면 이 화면을 Claude에게 보내 주세요.\n"
+                       + "\n".join(f"• {k}: {v}" for k, v in errs.items()))
 
 
 # ---------------- 1. 잘 되는 영상 분석 ----------------
