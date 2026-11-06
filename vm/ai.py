@@ -392,10 +392,9 @@ def make_tts(cfg, text, out_wav):
                                [m for m in [cfg.get("gemini_tts_model"), "gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts"]
                                 if m and "3.8" in m] or ["gemini-3.8-flash-tts"])
         except Exception as e:
-            if "한도" in str(e) or "quota" in str(e).lower():
-                raise
-            # 아래 예전 방식으로 한 번 더 시도
-    # 2순위: 예전 방식
+            # 3.8 목소리 모델은 새 방식만 됨 → 진짜 오류를 그대로 보여 주기
+            raise RuntimeError("[새 목소리 방식 오류] " + str(e)[:600])
+    # 2순위: 예전 방식 (google-genai가 옛 버전일 때만)
     voice = types.SpeechConfig(voice_config=types.VoiceConfig(
         prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=cfg.get("tts_voice", "Kore"))))
     style = (cfg.get("tts_style") or "").strip()
