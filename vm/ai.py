@@ -160,7 +160,7 @@ LONG_SCRIPT_PROMPT = """당신은 조회수가 잘 나오는 한국 유튜브 '�
   ]}}
  ]
 }}
-chapters는 {nchap}개, 전체 cuts 합계는 {ncuts}개 안팎(장마다 5~7개).
+chapters는 {nchap}개, 전체 cuts 합계는 정확히 {ncuts}개 안팎(장마다 비슷하게 나눔). 나레이션은 컷마다 150~230자를 꼭 지켜 전체 길이를 맞추세요.
 각 장의 마지막 컷 나레이션은 다음 장이 궁금해지는 한 문장('그런데 그날 밤, …')으로 끝내세요.
 컷마다 visual은 서로 확실히 달라야 합니다(장소·구도·인물 조합을 바꿀 것)."""
 
@@ -170,7 +170,7 @@ def _write_long(cfg, channel, analysis, topic):
         name=channel["name"], rules="\n".join("- " + r for r in channel["rules"]),
         analysis=analysis or "(분석 없음)", topic=topic or "(자유 주제)",
         ncuts=channel["cuts"], nchap=channel.get("chapters", 5))
-    data = _json_from(_claude(cfg, prompt, max_tokens=24000))
+    data = _json_from(_claude(cfg, prompt, max_tokens=min(64000, int(channel['cuts']) * 450 + 3000)))
     cuts, n = [], 0
     for ch in data.get("chapters", []):
         for i, c in enumerate(ch.get("cuts", [])):

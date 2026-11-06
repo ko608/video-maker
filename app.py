@@ -82,7 +82,16 @@ tab1, tab2, tab3, tab4 = st.tabs(["① 분석·대본", "② 재료 만들기", 
 with tab1:
     chs = channels()
     ch_name = st.selectbox("우리 채널", list(chs))
-    ch = chs[ch_name]
+    ch = dict(chs[ch_name])
+    if ch.get("format") == "longform":
+        mins = st.select_slider("⏱ 영상 길이 (분)", options=[5, 8, 10, 15, 20, 25, 30], value=10,
+                                help="길수록 그림·목소리 개수가 늘어 비용과 만드는 시간이 늘어요")
+        ch["cuts"] = max(10, round(mins * 60 / 28))          # 장면 1개 ≈ 25~30초
+        ch["chapters"] = max(3, min(10, mins // 3 + 1))
+        st.caption(f"→ 장면 약 {ch['cuts']}개, {ch['chapters']}개 장으로 써요. "
+                   f"(자동 그림이면 대략 {ch['cuts'] * 70:,}~{ch['cuts'] * 130:,}원)")
+    else:
+        st.caption("⏱ 쇼츠는 약 55초(6컷)로 고정이에요.")
     url = st.text_input("잘 되는 영상 유튜브 링크 (없으면 비워 두고 아래 주제만 써도 됩니다)")
     # ---- 💡 한 단어 → 주제 후보 3~4개 뽑기 ----
     k1, k2 = st.columns([3, 1])
