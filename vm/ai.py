@@ -68,7 +68,8 @@ def _with_retry(fn, models):
                     raise RuntimeError("구글 사용 한도에 걸렸어요. ① 1분당 횟수 한도면 몇 분 뒤 다시 누르면 이어서 만들어요 "
                                        "(이미 만든 건 그대로 둠). ② AI Studio에서 정한 월 사용 한도(지출 한도)에 닿았으면 한도를 올려 주세요. ("
                                        + str(last)[:200] + ")")
-                if any(k in msg for k in ("404", "NOT_FOUND", "no longer available", "not supported")):
+                if any(k in msg for k in ("404", "NOT_FOUND", "no longer available", "not supported",
+                                          "Unknown name", "Cannot find field")):
                     break  # 이 모델은 못 씀 → 바로 다음 모델로
                 if not any(k in msg for k in ("503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "overloaded", "500")):
                     raise
@@ -395,9 +396,12 @@ def make_tts(cfg, text, out_wav):
                                [m for m in [cfg.get("gemini_tts_model"), "gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts"]
                                 if m and "3.8" in m] or ["gemini-3.8-flash-tts"])
         except Exception as e:
-            # 3.8 목소리 모델은 새 방식만 됨 → 진짜 오류를 그대로 보여 주기
-            raise RuntimeError("[새 목소리 방식 오류] " + str(e)[:600])
-    # 2순위: 예전 방식 (google-genai가 옛 버전일 때만)
+            first_err = str(e)[:400]
+            if "한도" in first_err:
+                raise
+    else:
+        first_err = ""
+    # 2순위: 예전 방식 (generate_content) — 3.1 미리보기 목소리 등
     voice = types.SpeechConfig(voice_config=types.VoiceConfig(
         prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=cfg.get("tts_voice", "Kore"))))
     style = (cfg.get("tts_style") or "").strip()
@@ -418,8 +422,11 @@ def make_tts(cfg, text, out_wav):
             model=m, contents=text,
             config=types.GenerateContentConfig(response_modalities=["AUDIO"], speech_config=voice))
 
-    r = _with_retry(call, [cfg["gemini_tts_model"], "gemini-3.8-flash-tts", "gemini-3.1-flash-tts-preview",
-                           "gemini-3.8-flash-lite-tts"])
+    try:
+        r = _with_retry(call, ["gemini-3.1-flash-tts-preview", "gemini-2.5-pro-preview-tts",
+                               cfg["gemini_tts_model"], "gemini-3.8-flash-tts"])
+    except Exception as e:
+        raise RuntimeError(f"[목소리 오류] 새 방식: {first_err}\n예전 방식: {str(e)[:500]}")
     part = r.candidates[0].content.parts[0].inline_data
     data = part.data
     if isinstance(data, str):
