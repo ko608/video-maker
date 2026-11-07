@@ -31,7 +31,19 @@ def _json_from(text):
     m = re.search(r"\{.*\}", text, re.S)
     if not m:
         raise RuntimeError("AI 답에서 대본(JSON)을 찾지 못했어요. 다시 눌러 주세요.")
-    return json.loads(m.group(0))
+    raw = m.group(0)
+    try:
+        return json.loads(raw)
+    except Exception:
+        # 대사 따옴표 등으로 JSON이 살짝 깨졌을 때 자동으로 고쳐서 읽기
+        try:
+            import json_repair
+            fixed = json_repair.loads(raw)
+            if isinstance(fixed, dict) and fixed:
+                return fixed
+        except Exception:
+            pass
+        raise
 
 
 FALLBACK_TEXT = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-pro-latest", "gemini-3.1-pro-preview"]
@@ -163,7 +175,7 @@ LONG_SCRIPT_PROMPT = """당신은 조회수가 잘 나오는 한국 유튜브 '�
  "characters": "등장인물 외모 설명(영어, 모든 장면에서 같은 사람으로 보이게): 이름·나이·머리·옷",
  "chapters": [
   {{"title": "장 제목(짧게)", "cuts": [
-    {{"narration": "나레이션 150~230자. 인물 대사는 \"큰따옴표\"로 넣어 생생하게", "visual": "영어 장면 묘사: 시대·장소 구체적으로, 인물·행동·표정, 카메라 구도"}}
+    {{"narration": "나레이션 150~230자. 인물 대사는 “둥근 따옴표”로 넣어 생생하게(곧은 따옴표는 절대 쓰지 말 것)", "visual": "영어 장면 묘사: 시대·장소 구체적으로, 인물·행동·표정, 카메라 구도"}}
   ]}}
  ]
 }}

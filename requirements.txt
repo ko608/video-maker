@@ -3,3 +3,4 @@ google-genai>=2.30
 anthropic>=0.40
 imageio-ffmpeg>=0.5
 pillow>=10
+json-repair
