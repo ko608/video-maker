@@ -155,23 +155,34 @@ def build_segment(work: Path, idx, cut, cfg, log=print):
         filt.append(f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS},setsar=1,"
                     f"tpad=stop_mode=clone:stop_duration={max(0, dur - vdur):.2f}[v0]")
     else:
-        frames = int(dur * FPS)
-        args += ["-loop", "1", "-framerate", str(FPS), "-t", f"{dur:.2f}", "-i", str(media)]
-        if cfg.get("image_motion", False):     # 천천히 확대 (느림)
-            ZW, ZH = int(W * 1.25) // 2 * 2, int(H * 1.25) // 2 * 2
-            filt.append(f"[0:v]scale={ZW}:{ZH}:force_original_aspect_ratio=increase,crop={ZW}:{ZH},"
-                        f"zoompan=z='min(zoom+{0.13 / max(frames, 1):.6f},1.15)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={W}x{H}:fps={FPS},"
-                        f"setsar=1[v0]")
-        else:                                   # 고정 그림 (훨씬 빠름)
-            iw, ih = _img_size(media)
-            if iw and ih and (iw / ih) / (W / H) > 1.4:
-                # 가로 그림을 세로 영상에 → 잘라 버리지 않고 가운데 크게 + 뒤는 흐린 배경 (인물이 안 잘림)
-                filt.append(f"[0:v]split=2[bg0][fg0];"
-                            f"[bg0]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},boxblur=30:2,eq=brightness=0.06[bg];"
-                            f"[fg0]scale={W}:-2[fg];[bg][fg]overlay=0:(H-h)/2,fps={FPS},setsar=1[v0]")
+        # 그림 컷: 그림이 여러 장이면 나눠서 번갈아 보여 줌 (5~6초마다 화면 바뀜) + 천천히 움직임
+        imgs = [media] + [Path(x) for x in cut.get("extras", []) if Path(x).exists()]
+        k = len(imgs)
+        part = dur / k
+        motion = cfg.get("image_motion", True)
+        labels = []
+        for j, im in enumerate(imgs):
+            fr = max(1, int(part * FPS))
+            args += ["-loop", "1", "-framerate", str(FPS), "-t", f"{part:.3f}", "-i", str(im)]
+            iw, ih = _img_size(im)
+            wide = iw and ih and (iw / ih) / (W / H) > 1.4
+            if wide:   # 가로 그림을 세로 영상에 → 가운데 크게 + 뒤는 흐린 배경
+                base = (f"[{j}:v]split=2[bg{j}][fg{j}];"
+                        f"[bg{j}]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},boxblur=30:2,eq=brightness=0.06[bgs{j}];"
+                        f"[fg{j}]scale={W}:-2[fgs{j}];[bgs{j}][fgs{j}]overlay=0:(H-h)/2[b{j}]")
             else:
-                filt.append(f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS},setsar=1[v0]")
-    n_in = 1
+                base = f"[{j}:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H}[b{j}]"
+            if motion:   # 확대·축소를 번갈아 (지루하지 않게)
+                zin = j % 2 == 0
+                zexpr = (f"min(1+{0.10 / fr:.6f}*on,1.10)" if zin else f"max(1.10-{0.10 / fr:.6f}*on,1.0)")
+                filt.append(base + f";[b{j}]scale={int(W*1.2)//2*2}:{int(H*1.2)//2*2},"
+                            f"zoompan=z='{zexpr}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s={W}x{H}:fps={FPS},"
+                            f"trim=duration={part:.3f},setpts=PTS-STARTPTS,setsar=1[p{j}]")
+            else:
+                filt.append(base + f";[b{j}]fps={FPS},setsar=1[p{j}]")
+            labels.append(f"[p{j}]")
+        filt.append("".join(labels) + f"concat=n={k}:v=1:a=0,fps={FPS},format=yuv420p[v0]")
+    n_in = (1 if is_video else len(imgs))
     # 오디오 입력
     if audio:
         args += ["-i", str(audio)]; a_idx = n_in; n_in += 1

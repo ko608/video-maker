@@ -143,12 +143,12 @@ SCRIPT_PROMPT = """당신은 조회수가 잘 나오는 한국 유튜브 스토�
  "characters": "등장인물 외모 설명(영어, 모든 장면에서 같은 사람으로 보이게): 나이·머리·옷",
  "cuts": [
   {{"no": 1, "kind": "video", "line": "대사(따옴표 없이, 15자 안팎)", "speaker": "누가 누구에게", "speaker_en": "English: ONLY the person who speaks + look, e.g. the daughter-in-law (woman in her 30s, ponytail, beige cardigan)", "narration": "", "visual": "영어 장면 묘사 (인물·행동·장소·표정)"}},
-  {{"no": 2, "kind": "image", "line": "", "speaker": "", "narration": "나레이션 90~130자", "visual": "영어 장면 묘사"}}
+  {{"no": 2, "kind": "image", "line": "", "speaker": "", "narration": "나레이션 90~130자", "visual": "영어 장면 묘사 (첫 번째 화면)", "shots": ["영어: 두 번째 화면(다른 구도 — 예: 음식·물건 클로즈업)", "영어: 세 번째 화면(다른 구도 — 예: 듣는 사람 반응 얼굴 클로즈업)"]}}
  ]
 }}
 cuts는 정확히 {ncuts}개, 규칙의 컷 구성을 따르세요.
 line(대사)과 visual에는 돈·현금·병원·진료·수술·피·죽음·내놔·때리다·경찰 같은 격한 말을 쓰지 말고 부드러운 말로 바꿔 쓰세요(영상 도구가 거부함). 나레이션은 그대로 써도 됩니다.
-그림+나레이션 컷(정지 화면)의 visual은 반드시 둘 중 하나로 쓰세요: ① 음식 클로즈업(김이 나는 국밥, 반찬, 손에 든 그릇 등 화면 가득) ② 인물 얼굴 클로즈업(표정이 크게 보이게). 멀리서 사람 형체만 보이는 장면은 절대 쓰지 마세요. 옛날 이야기라도 인물은 단정하고 깔끔하게(옷·얼굴 깨끗하게) 묘사하세요. 각 컷의 visual은 대부분 인물 상반신이 가깝게 보이는 구도(medium close-up)로 쓰고, 넓게 멀리 찍는 구도는 피하세요. 각 컷의 visual에는 시대·장소를 구체적으로 쓰세요(예: 1970s shabby thatched-roof mountain tavern, small dim-free room with paper doors). 각 컷의 visual은 서로 확실히 달라야 합니다 — 장소·행동·카메라 구도(클로즈업/전신/손 클로즈업 등)·등장인물 조합을 컷마다 바꾸고, 같은 문장을 되풀이하지 마세요."""
+그림+나레이션 컷(정지 화면)의 visual은 반드시 둘 중 하나로 쓰세요: ① 음식 클로즈업(김이 나는 국밥, 반찬, 손에 든 그릇 등 화면 가득) ② 인물 얼굴 클로즈업(표정이 크게 보이게). 멀리서 사람 형체만 보이는 장면은 절대 쓰지 마세요. 옛날 이야기라도 인물은 단정하고 깔끔하게(옷·얼굴 깨끗하게) 묘사하세요. image 컷은 화면이 5~6초마다 바뀌어야 하므로 visual(첫 화면) + shots 2개, 모두 3가지 다른 구도로 쓰세요(얼굴 클로즈업 / 음식·물건 클로즈업 / 상대 반응 클로즈업). 각 컷의 visual은 대부분 인물 상반신이 가깝게 보이는 구도(medium close-up)로 쓰고, 넓게 멀리 찍는 구도는 피하세요. 각 컷의 visual에는 시대·장소를 구체적으로 쓰세요(예: 1970s shabby thatched-roof mountain tavern, small dim-free room with paper doors). 각 컷의 visual은 서로 확실히 달라야 합니다 — 장소·행동·카메라 구도(클로즈업/전신/손 클로즈업 등)·등장인물 조합을 컷마다 바꾸고, 같은 문장을 되풀이하지 마세요."""
 
 
 LONG_SCRIPT_PROMPT = """당신은 시청자가 20~30분 동안 한 번도 넘기지 못하는 한국 '주말 드라마' 작가 겸 유튜브 오디오 드라마 작가입니다.
@@ -188,7 +188,7 @@ LONG_SCRIPT_PROMPT = """당신은 시청자가 20~30분 동안 한 번도 넘기
  ],
  "chapters": [
   {{"title": "장 제목(짧게)", "cuts": [
-    {{"kind": "image", "narration": "나레이션 150~230자. 인물 대사를 “둥근 따옴표”로 2~4번 넣어 드라마처럼(곧은 따옴표는 절대 쓰지 말 것)", "visual": "영어 드라마 장면 묘사"}},
+    {{"kind": "image", "narration": "나레이션 150~230자. 인물 대사를 “둥근 따옴표”로 2~4번 넣어 드라마처럼(곧은 따옴표는 절대 쓰지 말 것)", "visual": "영어 드라마 장면 묘사 (첫 화면)", "shots": ["영어: 두 번째 화면(다른 구도)", "영어: 세 번째 화면(다른 구도)"]}},
     {{"kind": "video", "line": "이 장에서 가장 센 순간의 대사(15자 안팎)", "speaker": "누가 누구에게", "speaker_en": "English: ONLY the person who speaks + look", "visual": "영어 드라마 장면: 말하는 사람 얼굴 클로즈업"}}
   ]}}
  ]
@@ -221,7 +221,7 @@ def _write_long(cfg, channel, analysis, topic):
                          "speaker": c.get("speaker", "") if kind == "video" else "",
                          "speaker_en": c.get("speaker_en", "") if kind == "video" else "",
                          "narration": c.get("narration", "") if kind == "image" else "",
-                         "visual": c.get("visual", "")})
+                         "visual": c.get("visual", ""), "shots": c.get("shots", []) if kind == "image" else []})
     data["cuts"] = cuts
     data.pop("chapters", None)
     data.pop("opening", None)
@@ -251,6 +251,7 @@ def write_script(cfg, channel, analysis="", topic=""):
     for c in data.get("cuts", []):
         c["line"] = soften(c.get("line", ""))
         c["visual"] = soften(c.get("visual", ""))
+        c["shots"] = [soften(x) for x in (c.get("shots") or [])][:2]
     return data
 
 

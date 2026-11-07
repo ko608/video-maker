@@ -99,6 +99,18 @@ def cut_file(p, no):
     return None
 
 
+EXTRA = ["b", "c"]   # 그림 컷의 두 번째·세 번째 화면 파일: 02_b.png, 02_c.png
+
+
+def extra_files(p, no):
+    out = []
+    for t in EXTRA:
+        f = sorted((p / "재료").glob(f"{int(no):02d}_{t}.*"))
+        if f:
+            out.append(f[0])
+    return out
+
+
 def make_thumbs(p, data, fmt):
     """썸네일 A·B 만들기 — 재료 그림 중 선명한 장면 2개 사용"""
     from PIL import Image as _I
@@ -126,8 +138,9 @@ def thumb_prompt(data, fmt, style):
     hook = " / ".join(x for x in data.get("thumbnail", []) if x)
     where = ("face in the upper half of the frame, lower 40% kept simple for big text"
              if fmt != "longform" else "face on the right half, left side and bottom kept simple for big text")
-    return (f"YouTube thumbnail photo. Medium close-up (head and shoulders, upper chest visible) of the MAIN CHARACTER, "
-            f"face fills about one third of the frame height with some room around the head and a little of the place visible, {where}. "
+    return (f"YouTube thumbnail photo. Close-up from the chest up of the MAIN CHARACTER: the head is large, "
+            f"about 45 percent of the frame height, face centered horizontally (never cut off at the edge), {where}. "
+            "Other characters may appear small and softly blurred behind. "
             f"Strong clear emotion that fits this hook: '{hook}' (shock, tears, anger or surprise). "
             "Very bright high-key lighting, bright clean background softly blurred, vivid but natural colors, "
             "sharp eyes. Ordinary everyday Korean person with a natural face. "
@@ -303,12 +316,17 @@ if page == "② 재료 만들기":
             with ThreadPoolExecutor(max_workers=4) as pool:
                 for c in data["cuts"]:
                     no = int(c["no"])
-                    if c["kind"] != "image" or cut_file(p, no):
+                    if c["kind"] != "image":
                         continue
-                    base = (f"Scene {no}: {c['visual']}. Style: {style}. Characters: {data.get('characters','')}. "
-                            "Ordinary everyday Korean people with average, natural faces, light natural makeup, "
-                            "realistic skin texture. ONE single scene in one frame — no collage, no panels, no split screen, no comic layout")
-                    jobs[pool.submit(ai.make_image, cfg, base, p / "재료" / f"{no:02d}.png", aspect, ref)] = no
+                    shots = [("", c["visual"])] + [(t, v) for t, v in zip(EXTRA, c.get("shots") or [])]
+                    for tag, vis in shots:
+                        target = p / "재료" / (f"{no:02d}.png" if not tag else f"{no:02d}_{tag}.png")
+                        if (not tag and cut_file(p, no)) or (tag and list((p / "재료").glob(f"{no:02d}_{tag}.*"))):
+                            continue
+                        base = (f"Scene {no}: {vis}. Style: {style}. Characters: {data.get('characters','')}. "
+                                "Ordinary everyday Korean people with average, natural faces, light natural makeup, "
+                                "realistic skin texture. ONE single scene in one frame — no collage, no panels, no split screen, no comic layout")
+                        jobs[pool.submit(ai.make_image, cfg, base, target, aspect, ref)] = f"{no}{'-' + tag if tag else ''}"
                 log(f"그림 {len(jobs)}장을 4장씩 동시에 만드는 중…")
                 done_n = 0
                 for fu in as_completed(jobs):
@@ -374,7 +392,7 @@ if page == "② 재료 만들기":
             also_still = st.checkbox("대사 컷의 '첫 장면 그림'도 같이 지우기", value=False)
             if pick and st.button(f"🗑 컷 {pick} 재료 지우기", type="primary"):
                 for no in pick:
-                    for old_f in (p / "재료").glob(f"{no:02d}.*"):
+                    for old_f in list((p / "재료").glob(f"{no:02d}.*")) + list((p / "재료").glob(f"{no:02d}_[bc].*")):
                         old_f.unlink()
                     if also_still:
                         for old_f in (p / "재료").glob(f"{no:02d}_첫장면.*"):
@@ -406,6 +424,8 @@ if page == "② 재료 만들기":
                 continue   # 대사 영상은 컷마다 시작 그림을 넣고 아래 짧은 문구로 따로 만들기
             else:
                 lines_all.append(f"{c['no']}번 [이미지] {c['visual']}")
+                for k_, v_ in enumerate(c.get("shots") or [], 2):
+                    lines_all.append(f"{c['no']}-{k_}번 [이미지] {v_}")
         lines_all = [soften(x) for x in lines_all]
         st.text_area("① 그림 컷 문구 전체 복사 → 플로우 채팅창에 한 번에 (대사 영상은 아래 컷마다 짧은 문구로)",
                      "\n".join(lines_all), height=220, key="flow_all")
@@ -416,7 +436,11 @@ if page == "② 재료 만들기":
         if ups:
             vid_cuts = [int(c["no"]) for c in data["cuts"] if c["kind"] == "video" and not cut_file(p, int(c["no"]))]
             img_cuts = [int(c["no"]) for c in data["cuts"] if c["kind"] == "image" and not cut_file(p, int(c["no"]))]
-            all_nos = ["넣지 않음"] + [int(c["no"]) for c in data["cuts"]]
+            all_nos = ["넣지 않음"]
+            for c in data["cuts"]:
+                all_nos.append(int(c["no"]))
+                if c["kind"] == "image":
+                    all_nos += [f"{int(c['no'])}-2", f"{int(c['no'])}-3"]
             st.caption("파일마다 들어갈 컷을 골라 주세요. (처음엔 빈 컷 순서대로 미리 골라 둠)")
             plan, vi, ii = {}, 0, 0
             cols = st.columns(4)
@@ -445,9 +469,14 @@ if page == "② 재료 만들기":
                     no = plan[k]
                     if no == "넣지 않음":
                         continue
-                    for old in (p / "재료").glob(f"{int(no):02d}.*"):
+                    if isinstance(no, str) and "-" in no:      # 그림 컷의 2·3번째 화면
+                        n_, sub_ = no.split("-")
+                        stem = f"{int(n_):02d}_{EXTRA[int(sub_) - 2]}"
+                    else:
+                        stem = f"{int(no):02d}"
+                    for old in (p / "재료").glob(f"{stem}.*"):
                         old.unlink()
-                    (p / "재료" / f"{int(no):02d}{Path(u.name).suffix.lower()}").write_bytes(u.getbuffer())
+                    (p / "재료" / f"{stem}{Path(u.name).suffix.lower()}").write_bytes(u.getbuffer())
                     done.append(no)
                 st.success(f"컷 {done} 에 넣었어요.")
         st.divider()
@@ -466,7 +495,8 @@ if page == "② 재료 만들기":
                         "다른 사람은 말하지 않음. 인물 상반신 위주로 가깝게, 주변은 흐리고 단순하게. 밝고 환한 분위기, 자막 없이.")
             else:
                 flow = (f"[컷 {no} 장면] {c['visual']}"
-                        f"\n[공통] {ratio_ko}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로 "
+                        + "".join(f"\n[컷 {no}-{k_} 장면] {v_}" for k_, v_ in enumerate(c.get("shots") or [], 2))
+                        + f"\n[공통] {ratio_ko}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로 "
                         "(더 부유하거나 현대식으로 바꾸지 말 것), 정지 그림은 음식 클로즈업이나 인물 얼굴 클로즈업(멀리서 형체만 보이는 장면 금지), 인물은 옛날 이야기라도 단정하고 깔끔하게, 인물 상반신 위주로 가깝게(허리나 가슴 위), 인물이 화면을 꽉 채우게, 주변은 흐리고 단순하게(지저분한 물건 없이), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, 자연스러운 피부). "
                         + f"등장인물: {data.get('characters','')}")
             flow = soften(flow)
@@ -485,6 +515,13 @@ if page == "② 재료 만들기":
                         r.video(str(f))
                 else:
                     show_small(r, f)
+            if c["kind"] == "image":
+                ex = extra_files(p, no)
+                r.caption(f"추가 화면 {len(ex)}/2장 (있으면 5~6초마다 번갈아 보여 줘요)")
+                for e_ in ex:
+                    show_small(r, e_)
+                    if r.button(f"🗑 {e_.stem} 지우기", key=f"delx_{e_.stem}"):
+                        e_.unlink(); st.rerun()
                 if r.button(f"🗑 컷 {no} 재료 지우기", key=f"del{no}"):
                     f.unlink(); st.session_state.pop(f"_up_{p.name}_{no}", None); st.rerun()
             else:
@@ -528,7 +565,7 @@ if page == "③ 완성 영상":
                 except Exception as e:
                     st.error(f"오류: {e}")
             u1.text_area("또는 플로우에 넣을 문구 (무료)",
-                         "썸네일용 사진. 주인공 어깨 위까지 보이게(얼굴은 화면 높이의 3분의 1 정도, 머리 위 여유 조금), " +
+                         "썸네일용 사진. 주인공 가슴 위까지 가깝게, 얼굴을 크게(머리가 화면 높이의 절반 가까이), 얼굴은 가로 가운데(가장자리에 잘리지 않게), 다른 인물은 뒤에 작고 흐리게, " +
                          ("얼굴은 화면 위쪽, 아래쪽은 단순하게 비워 두기. " if fmt != "longform" else "얼굴은 오른쪽, 왼쪽과 아래는 단순하게. ") +
                          "놀람·눈물·분노처럼 감정이 크게 드러나는 표정, 아주 밝은 조명, 배경은 밝고 흐리게, 글자 없이. "
                          f"{ratio_ko}. 등장인물: {data.get('characters','')}", height=110, key="th_flow")
@@ -625,7 +662,8 @@ if page == "③ 완성 영상":
                                 log(f"컷 {no}: 나레이션 목소리 만드는 중")
                                 ai.make_tts(cfg, c["narration"], wav)
                             audio = wav
-                    cuts.append(dict(media=media, audio=audio, text=c.get("line") or c.get("narration", "")))
+                    cuts.append(dict(media=media, audio=audio, text=c.get("line") or c.get("narration", ""),
+                                     extras=[str(x) for x in extra_files(p, no)] if c["kind"] == "image" else []))
                 assemble.set_format(fmt)
                 if any(c["kind"] == "video" for c in data["cuts"]):
                     assemble.FPS = 30      # 대사 영상이 있으면 부드럽게 30프레임
