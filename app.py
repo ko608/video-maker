@@ -199,8 +199,9 @@ if page == "① 분석·대본":
             st.session_state["_last_pick"] = pick
             it = ideas[[f"{i['title']} — {i['twist']}" for i in ideas].index(pick)]
             st.session_state["topic_box"] = f"{it['title']}. 반전: {it['twist']}"
-    topic = st.text_area("주제·메모 (선택)", placeholder="예: 시어머니가 며느리 몰래 들어 둔 보험. 돈 + 사주 반전",
-                         height=80, key="topic_box")
+    topic = st.text_area("주제·메모 (선택) — 예전에 만든 이야기 줄거리를 통째로 붙여 넣어도 돼요 (롱폼으로 키워 줘요)",
+                         placeholder="예: 시어머니가 며느리 몰래 들어 둔 보험. / 또는 붕어빵 시리즈 줄거리 전체",
+                         height=160, key="topic_box")
 
     c1, c2 = st.columns(2)
     if c1.button("🔍 분석하고 대본 만들기", type="primary", width="stretch"):
