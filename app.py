@@ -126,7 +126,8 @@ def thumb_prompt(data, fmt, style):
     hook = " / ".join(x for x in data.get("thumbnail", []) if x)
     where = ("face in the upper half of the frame, lower 40% kept simple for big text"
              if fmt != "longform" else "face on the right half, left side and bottom kept simple for big text")
-    return (f"YouTube thumbnail photo. Extreme close-up of the MAIN CHARACTER's face, face very large, {where}. "
+    return (f"YouTube thumbnail photo. Medium close-up (head and shoulders, upper chest visible) of the MAIN CHARACTER, "
+            f"face fills about one third of the frame height with some room around the head and a little of the place visible, {where}. "
             f"Strong clear emotion that fits this hook: '{hook}' (shock, tears, anger or surprise). "
             "Very bright high-key lighting, bright clean background softly blurred, vivid but natural colors, "
             "sharp eyes. Ordinary everyday Korean person with a natural face. "
@@ -493,7 +494,7 @@ if page == "③ 완성 영상":
         missing = [int(c["no"]) for c in data["cuts"] if not cut_file(p, int(c["no"]))]
         if missing:
             st.warning(f"재료가 없는 컷: {missing} — ② 탭에서 채워 주세요.")
-        with st.expander("🎨 썸네일 전용 그림 (영상 장면 말고, 주인공 얼굴 크게·밝게)", expanded=True):
+        with st.expander("🎨 썸네일 전용 그림 (영상 장면 말고, 주인공 중심·밝게)", expanded=True):
             sp_ = p / "재료" / "썸네일전용.png"
             u1, u2 = st.columns([3, 2])
             u1.caption("영상 장면을 쓰지 않고 썸네일만을 위한 그림을 따로 만들어요. "
@@ -506,8 +507,8 @@ if page == "③ 완성 영상":
                 except Exception as e:
                     st.error(f"오류: {e}")
             u1.text_area("또는 플로우에 넣을 문구 (무료)",
-                         "썸네일용 사진. 주인공 얼굴을 아주 크게 클로즈업, " +
-                         ("화면 위쪽 절반에 얼굴, 아래쪽은 단순하게 비워 두기. " if fmt != "longform" else "얼굴은 오른쪽, 왼쪽과 아래는 단순하게. ") +
+                         "썸네일용 사진. 주인공 어깨 위까지 보이게(얼굴은 화면 높이의 3분의 1 정도, 머리 위 여유 조금), " +
+                         ("얼굴은 화면 위쪽, 아래쪽은 단순하게 비워 두기. " if fmt != "longform" else "얼굴은 오른쪽, 왼쪽과 아래는 단순하게. ") +
                          "놀람·눈물·분노처럼 감정이 크게 드러나는 표정, 아주 밝은 조명, 배경은 밝고 흐리게, 글자 없이. "
                          f"{ratio_ko}. 등장인물: {data.get('characters','')}", height=110, key="th_flow")
             upt = u1.file_uploader("플로우에서 만든 썸네일 그림 올리기", type=["png", "jpg", "jpeg", "webp"], key="th_up")
