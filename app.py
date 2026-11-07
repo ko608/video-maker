@@ -336,6 +336,9 @@ if page == "② 재료 만들기":
                 st.session_state["del_pick"] = imgs_
             if q3.button("고르기 지우기"):
                 st.session_state["del_pick"] = []
+            if st.session_state.pop("_clear_del", False):
+                st.session_state["del_pick"] = []
+                st.success("지웠어요. 다시 만들거나 올려 주세요.")
             st.session_state["del_pick"] = [x for x in st.session_state.get("del_pick", []) if x in have]
             pick = st.multiselect("지울 컷 (재료가 있는 컷만 나와요)", have, key="del_pick")
             also_still = st.checkbox("대사 컷의 '첫 장면 그림'도 같이 지우기", value=False)
@@ -346,8 +349,7 @@ if page == "② 재료 만들기":
                     if also_still:
                         for old_f in (p / "재료").glob(f"{no:02d}_첫장면.*"):
                             old_f.unlink()
-                st.session_state["del_pick"] = []
-                st.success(f"컷 {pick} 재료를 지웠어요.")
+                st.session_state["_clear_del"] = True
                 st.rerun()
         with st.expander("🔪 여러 칸으로 나온 그림 나누기 (한 장에 장면 2~4개가 위아래로 쌓여 나왔을 때)"):
             st.caption("나눈 그림은 빈 그림 컷에 차례로 들어가요. 가로로 긴 그림은 영상에서 잘리지 않게 "
