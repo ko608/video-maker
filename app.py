@@ -109,11 +109,38 @@ def make_thumbs(p, data, fmt):
             w_, h_ = _I.open(x).size; return w_ * h_
         except Exception:
             return 0
-    big = max(pics, key=_px) if pics else None
-    mid = pics[len(pics) // 2] if len(pics) > 1 else big
-    if mid == big and pics:
-        mid = pics[-1]
+    special = [x for x in pics if x.stem == "썸네일전용"]
+    scenes = [x for x in pics if x.stem != "썸네일전용"]
+    big = max(scenes, key=_px) if scenes else None
+    mid = scenes[len(scenes) // 2] if len(scenes) > 1 else big
+    if mid == big and scenes:
+        mid = scenes[-1]
+    if special:                 # 썸네일 전용 그림(주인공 얼굴 크게)이 있으면 A·B 모두 그걸로
+        return assemble.thumbnails(p, data.get("thumbnail", []), [special[0], special[0]], cfg)
     return assemble.thumbnails(p, data.get("thumbnail", []), [big, mid], cfg)
+
+
+def thumb_prompt(data, fmt, style):
+    """썸네일 전용 그림: 주인공 얼굴 크게, 밝게, 아래쪽은 글씨 자리"""
+    hook = " / ".join(x for x in data.get("thumbnail", []) if x)
+    where = ("face in the upper half of the frame, lower 40% kept simple for big text"
+             if fmt != "longform" else "face on the right half, left side and bottom kept simple for big text")
+    return (f"YouTube thumbnail photo. Extreme close-up of the MAIN CHARACTER's face, face very large, {where}. "
+            f"Strong clear emotion that fits this hook: '{hook}' (shock, tears, anger or surprise). "
+            "Very bright high-key lighting, bright clean background softly blurred, vivid but natural colors, "
+            "sharp eyes. Ordinary everyday Korean person with a natural face. "
+            f"Characters: {data.get('characters','')}. Keep the setting's era as in the story. "
+            "One single image, no collage, no text, no watermark.")
+
+
+def make_thumb_image(p, data, fmt):
+    ch = {c_["id"]: c_ for c_ in channels().values()}.get(data.get("channel"), {})
+    aspect = "16:9" if fmt == "longform" else "9:16"
+    ref = p / "재료" / "인물기준.png"
+    out = p / "재료" / "썸네일전용.png"
+    ai.make_image(cfg, thumb_prompt(data, fmt, ch.get("visual_style", "")), out, aspect=aspect,
+                  ref=ref if ref.exists() else None)
+    return out
 
 
 class Log:
@@ -463,6 +490,34 @@ if page == "③ 완성 영상":
         missing = [int(c["no"]) for c in data["cuts"] if not cut_file(p, int(c["no"]))]
         if missing:
             st.warning(f"재료가 없는 컷: {missing} — ② 탭에서 채워 주세요.")
+        with st.expander("🎨 썸네일 전용 그림 (영상 장면 말고, 주인공 얼굴 크게·밝게)", expanded=True):
+            sp_ = p / "재료" / "썸네일전용.png"
+            u1, u2 = st.columns([3, 2])
+            u1.caption("영상 장면을 쓰지 않고 썸네일만을 위한 그림을 따로 만들어요. "
+                       "인물 기준 그림이 있으면 같은 얼굴로 그려요.")
+            if u1.button("🎨 썸네일 그림 만들기 (1장, 수십 원)", key="mk_thimg"):
+                try:
+                    with st.spinner("썸네일 그림 만드는 중…"):
+                        make_thumb_image(p, data, fmt); make_thumbs(p, data, fmt)
+                    st.success("썸네일 그림과 썸네일 A·B를 새로 만들었어요.")
+                except Exception as e:
+                    st.error(f"오류: {e}")
+            u1.text_area("또는 플로우에 넣을 문구 (무료)",
+                         "썸네일용 사진. 주인공 얼굴을 아주 크게 클로즈업, " +
+                         ("화면 위쪽 절반에 얼굴, 아래쪽은 단순하게 비워 두기. " if fmt != "longform" else "얼굴은 오른쪽, 왼쪽과 아래는 단순하게. ") +
+                         "놀람·눈물·분노처럼 감정이 크게 드러나는 표정, 아주 밝은 조명, 배경은 밝고 흐리게, 글자 없이. "
+                         f"{ratio_ko}. 등장인물: {data.get('characters','')}", height=110, key="th_flow")
+            upt = u1.file_uploader("플로우에서 만든 썸네일 그림 올리기", type=["png", "jpg", "jpeg", "webp"], key="th_up")
+            if new_upload(f"{p.name}_thimg", upt):
+                for old_ in (p / "재료").glob("썸네일전용.*"):
+                    old_.unlink()
+                (p / "재료" / "썸네일전용.png").write_bytes(upt.getbuffer())
+                make_thumbs(p, data, fmt)
+                st.success("올린 그림으로 썸네일 A·B를 만들었어요.")
+            if sp_.exists():
+                show_small(u2, sp_, caption="썸네일 전용 그림")
+                if u2.button("🗑 이 그림 빼기 (장면 그림으로 돌아가기)", key="del_thimg"):
+                    sp_.unlink(); make_thumbs(p, data, fmt); st.rerun()
         with st.expander("🖼 썸네일 문구 바꾸기 (영상은 그대로, 썸네일만 다시 만들어요 — 0원)"):
             tl = (list(data.get("thumbnail", [])) + ["", ""])[:2]
             t1 = st.text_input("윗줄 (흰 글씨, 10자 안팎)", tl[0], key=f"th1_{p.name}")
@@ -562,6 +617,12 @@ if page == "③ 완성 영상":
                     if rows:
                         rows[0] = "0:00 " + rows[0].split(" ", 1)[1]
                         chapters_txt = "\n\n[챕터 — 설명란에 그대로 붙이세요]\n" + "\n".join(rows)
+                if not (p / "재료" / "썸네일전용.png").exists():
+                    try:
+                        log("썸네일 전용 그림(주인공 얼굴 크게) 만드는 중…")
+                        make_thumb_image(p, data, fmt)
+                    except Exception as e:
+                        log(f"  (썸네일 전용 그림은 건너뜀 — 장면 그림으로 만들어요: {str(e)[:80]})")
                 make_thumbs(p, data, fmt)
                 info = (f"[제목]\n{data.get('title','')}\n\n[설명]\n{data.get('description','')}{chapters_txt}\n\n"
                         f"[태그]\n{data.get('tags','')}\n\n[고정 댓글]\n{data.get('pinned_comment','')}\n\n"
