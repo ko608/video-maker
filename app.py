@@ -138,8 +138,8 @@ def thumb_prompt(data, fmt, style):
     hook = " / ".join(x for x in data.get("thumbnail", []) if x)
     where = ("face in the upper half of the frame, lower 40% kept simple for big text"
              if fmt != "longform" else "face on the right half, left side and bottom kept simple for big text")
-    return (f"YouTube thumbnail photo. Close-up from the chest up of the MAIN CHARACTER: the head is large, "
-            f"about 45 percent of the frame height, face centered horizontally (never cut off at the edge), {where}. "
+    return (f"YouTube thumbnail photo. Close-up from the chest up of the MAIN CHARACTER: the face is very large, "
+            f"forehead to chin about 50 percent of the frame height, eyes sharp with catchlights so the emotion reads in the pupils, face centered horizontally (never cut off at the edge), {where}. "
             "Other characters may appear small and softly blurred behind. "
             f"Strong clear emotion that fits this hook: '{hook}' (shock, tears, anger or surprise). "
             "Very bright high-key lighting, bright clean background softly blurred, vivid but natural colors, "
@@ -353,7 +353,7 @@ if page == "② 재료 만들기":
                         if not still.exists():
                             log(f"컷 {no}: 첫 장면 그림 만드는 중 (플로우 시작 이미지용)")
                             ai.make_image(cfg, base + f". The speaker ({c.get('speaker_en') or c.get('speaker','')}) is in the foreground, "
-                                          "face clearly visible, about to speak.", still, ref=ref, aspect=aspect)
+                                          "face very close to the camera, filling most of the frame, eyes sharp and expressive, about to speak.", still, ref=ref, aspect=aspect)
                         if not mode_video:
                             continue
                         log(f"컷 {no}: 대사 영상 만드는 중 (1~3분)")
@@ -364,7 +364,7 @@ if page == "② 재료 만들기":
                                    "and speaks; every other person stays completely silent with mouth closed. "
                                    "Do not add any other lines. "
                                    f"Scene {no}: {c['visual']}. Characters: {data.get('characters','')}. {style}. "
-                                   "Natural lip sync, no background music, no subtitles, no text on screen.")
+                                   "Tight close-up on the speaker's face (face fills most of the frame, eyes sharp). Natural lip sync, no background music, no subtitles, no text on screen.")
                         ai.make_video(cfg, soften(vprompt), p / "재료" / f"{no:02d}.mp4", first_frame=still, aspect=aspect, log=log)
                 except Exception as e:
                     log(f"컷 {no} 실패: {e}")
@@ -416,7 +416,7 @@ if page == "② 재료 만들기":
                     (p / "재료" / f"{no:02d}.png").write_bytes(pc.read_bytes()); put.append(no)
                 st.success(f"{len(pieces)}장으로 나눠 컷 {put} 에 넣었어요." + ("" if len(put) == len(pieces) else " (빈 컷이 모자라 일부는 안 넣었어요)"))
         st.markdown("### 🆓 플로우로 한 번에 만들기 (무료)")
-        common = (f"{ratio_ko}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로(옛날 초가 주막이면 허름한 초가 그대로 — 더 부유하거나 현대식으로 바꾸지 말 것), 정지 그림은 음식 클로즈업이나 인물 얼굴 클로즈업(멀리서 형체만 보이는 장면 금지), 인물은 옛날 이야기라도 단정하고 깔끔하게, 인물 상반신 위주로 가깝게(허리나 가슴 위), 인물이 화면을 꽉 채우게, 주변은 흐리고 단순하게(지저분한 물건 없이), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, "
+        common = (f"{ratio_ko}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로(옛날 초가 주막이면 허름한 초가 그대로 — 더 부유하거나 현대식으로 바꾸지 말 것), 정지 그림은 음식 클로즈업이나 인물 얼굴 클로즈업(멀리서 형체만 보이는 장면 금지), 인물은 옛날 이야기라도 단정하고 깔끔하게, 얼굴은 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷하게 보여 감정이 읽히게), 두 사람이면 한 사람 얼굴을 크게 앞에·상대는 뒤에 작고 흐리게, 주변은 흐리고 단순하게(지저분한 물건 없이), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, "
                   f"자연스러운 피부). 모든 장면에서 같은 인물: {data.get('characters','')}")
         lines_all = [f"아래 그림들을 순서대로 만들어 줘. 첨부한 인물 기준 그림과 똑같은 사람(얼굴·머리·옷)으로 — 기준 그림의 왼쪽부터 등장인물 설명 순서대로. 여러 명이 나오는 장면도 각자 기준 그림의 그 사람으로. 공통: {common}", ""]
         for c in data["cuts"]:
@@ -492,12 +492,12 @@ if page == "② 재료 만들기":
                 # 플로우 영상은 짧게 — 시작 그림이 인물·배경을 이미 담고 있음 (긴 문구는 거절되기 쉬움)
                 flow = (f"첨부한 시작 그림에서 이어지는 {ratio_ko} 4초 영상. {c['visual']}\n"
                         f"{c.get('speaker','')} 말함: \"{c['line']}\"\n"
-                        "다른 사람은 말하지 않음. 인물 상반신 위주로 가깝게, 주변은 흐리고 단순하게. 밝고 환한 분위기, 자막 없이.")
+                        "다른 사람은 말하지 않음. 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷), 상대는 뒤에 흐리게. 밝고 환한 분위기, 자막 없이.")
             else:
                 flow = (f"[컷 {no} 장면] {c['visual']}"
                         + "".join(f"\n[컷 {no}-{k_} 장면] {v_}" for k_, v_ in enumerate(c.get("shots") or [], 2))
                         + f"\n[공통] {ratio_ko}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로 "
-                        "(더 부유하거나 현대식으로 바꾸지 말 것), 정지 그림은 음식 클로즈업이나 인물 얼굴 클로즈업(멀리서 형체만 보이는 장면 금지), 인물은 옛날 이야기라도 단정하고 깔끔하게, 인물 상반신 위주로 가깝게(허리나 가슴 위), 인물이 화면을 꽉 채우게, 주변은 흐리고 단순하게(지저분한 물건 없이), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, 자연스러운 피부). "
+                        "(더 부유하거나 현대식으로 바꾸지 말 것), 정지 그림은 음식 클로즈업이나 인물 얼굴 클로즈업(멀리서 형체만 보이는 장면 금지), 인물은 옛날 이야기라도 단정하고 깔끔하게, 얼굴은 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷하게 보여 감정이 읽히게), 두 사람이면 한 사람 얼굴을 크게 앞에·상대는 뒤에 작고 흐리게, 주변은 흐리고 단순하게(지저분한 물건 없이), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, 자연스러운 피부). "
                         + f"등장인물: {data.get('characters','')}")
             flow = soften(flow)
             m.text_area("플로우에 넣을 문구 (복사) — 맨 위가 이 컷만의 장면", flow, height=170, key=f"flow{no}")
@@ -565,7 +565,7 @@ if page == "③ 완성 영상":
                 except Exception as e:
                     st.error(f"오류: {e}")
             u1.text_area("또는 플로우에 넣을 문구 (무료)",
-                         "썸네일용 사진. 주인공 가슴 위까지 가깝게, 얼굴을 크게(머리가 화면 높이의 절반 가까이), 얼굴은 가로 가운데(가장자리에 잘리지 않게), 다른 인물은 뒤에 작고 흐리게, " +
+                         "썸네일용 사진. 주인공 가슴 위까지 가깝게, 얼굴을 아주 크게(이마부터 턱까지 화면 높이의 절반, 눈동자까지 또렷하게), 얼굴은 가로 가운데(가장자리에 잘리지 않게), 다른 인물은 뒤에 작고 흐리게, " +
                          ("얼굴은 화면 위쪽, 아래쪽은 단순하게 비워 두기. " if fmt != "longform" else "얼굴은 오른쪽, 왼쪽과 아래는 단순하게. ") +
                          "놀람·눈물·분노처럼 감정이 크게 드러나는 표정, 아주 밝은 조명, 배경은 밝고 흐리게, 글자 없이. "
                          f"{ratio_ko}. 등장인물: {data.get('characters','')}", height=110, key="th_flow")
