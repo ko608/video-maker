@@ -7,6 +7,13 @@ from PIL import Image, ImageDraw, ImageFont
 W, H, FPS = 1080, 1920, 30
 
 
+def _brighten(img):
+    from PIL import ImageEnhance
+    img = img.convert("RGB")
+    img = ImageEnhance.Brightness(img).enhance(1.08)
+    return ImageEnhance.Color(img).enhance(1.05)
+
+
 def thumb_font(cfg):
     """썸네일은 아주 굵은 글씨(Noto Sans KR Black)로 — 프로그램 폴더에 같이 들어 있음"""
     f = Path(__file__).resolve().parent.parent / "fonts" / "NotoSansKR-Black-subset.otf"
@@ -259,7 +266,7 @@ def thumbnail_wide(project: Path, lines, photo, cfg, out_name="썸네일_A.jpg")
     for yy in range(top, TH):
         a_ = int(170 * ((yy - top) / (TH - top)) ** 1.3)
         ds.line([(0, yy), (TW, yy)], fill=(0, 0, 0, a_))
-    img = Image.alpha_composite(img.convert("RGBA"), shade).convert("RGB")
+    img = _brighten(img)   # 글씨 아래를 어둡게 하지 않고, 전체를 살짝 밝게 (글씨는 굵은 테두리로 또렷하게)
     d = ImageDraw.Draw(img)
 
     def fit(s_, size):
@@ -274,10 +281,10 @@ def thumbnail_wide(project: Path, lines, photo, cfg, out_name="썸네일_A.jpg")
     y1 = y2 - s1 - 22
     if L[0]:
         w_ = d.textlength(L[0], font=f(s1))
-        d.text(((TW - w_) / 2, y1), L[0], font=f(s1), fill="white", stroke_width=10, stroke_fill="black")
+        d.text(((TW - w_) / 2, y1), L[0], font=f(s1), fill="white", stroke_width=13, stroke_fill="black")
     if L[1]:
         w_ = d.textlength(L[1], font=f(s2))
-        d.text(((TW - w_) / 2, y2), L[1], font=f(s2), fill=(255, 225, 0), stroke_width=12, stroke_fill="black")
+        d.text(((TW - w_) / 2, y2), L[1], font=f(s2), fill=(255, 225, 0), stroke_width=15, stroke_fill="black")
     out = project / out_name
     img.save(out, quality=95, subsampling=0)
     return out
@@ -362,7 +369,7 @@ def thumbnail_tall_low(project: Path, lines, photo, cfg, out_name="썸네일_A.j
     for yy in range(top, TH):
         a_ = int(160 * min(1, (yy - top) / (TH * 0.3)) ** 1.2)
         ds.line([(0, yy), (TW, yy)], fill=(0, 0, 0, a_))
-    img = Image.alpha_composite(img.convert("RGBA"), shade).convert("RGB")
+    img = _brighten(img)   # 글씨 아래를 어둡게 하지 않고, 전체를 살짝 밝게 (글씨는 굵은 테두리로 또렷하게)
     d = ImageDraw.Draw(img)
 
     def fit(s_, size):
@@ -376,11 +383,11 @@ def thumbnail_tall_low(project: Path, lines, photo, cfg, out_name="썸네일_A.j
     y1 = int(TH * 0.62)
     if L[0]:
         w_ = d.textlength(L[0], font=f(s1))
-        d.text(((TW - w_) / 2, y1), L[0], font=f(s1), fill="white", stroke_width=12, stroke_fill="black")
+        d.text(((TW - w_) / 2, y1), L[0], font=f(s1), fill="white", stroke_width=16, stroke_fill="black")
     if L[1]:
         y2 = y1 + (s1 + 34 if L[0] else 0)
         w_ = d.textlength(L[1], font=f(s2))
-        d.text(((TW - w_) / 2, y2), L[1], font=f(s2), fill=(255, 225, 0), stroke_width=14, stroke_fill="black")
+        d.text(((TW - w_) / 2, y2), L[1], font=f(s2), fill=(255, 225, 0), stroke_width=18, stroke_fill="black")
     out = project / out_name
     img.save(out, quality=95, subsampling=0)
     return out
@@ -430,7 +437,7 @@ def thumbnail(project: Path, lines, photo, cfg):
     for yy in range(0, SH):
         a = int(120 * (1 - yy / SH) ** 1.5)
         ds.line([(0, yy), (W, yy)], fill=(0, 0, 0, a))
-    img = Image.alpha_composite(img.convert("RGBA"), shade).convert("RGB")
+    img = _brighten(img)   # 글씨 아래를 어둡게 하지 않고, 전체를 살짝 밝게 (글씨는 굵은 테두리로 또렷하게)
     d = ImageDraw.Draw(img)
 
     def ctext(y, s, size, fill, stroke):
