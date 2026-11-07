@@ -576,11 +576,11 @@ if page == "③ 완성 영상":
                 (p / "work").mkdir(exist_ok=True)
                 need = [c for c in data["cuts"] if c["kind"] == "image" and c.get("narration")
                         and not (own_voice and list((p / "재료").glob(f"{int(c['no']):02d}_나레이션.*")))
-                        and not (p / "work" / f"voice2_{int(c['no']):02d}.wav").exists()]
+                        and not (p / "work" / f"v_{cfg.get('tts_voice','Kore')}_{int(c['no']):02d}.wav").exists()]
                 if need:
                     log(f"나레이션 목소리 {len(need)}개를 동시에 만드는 중…")
                     with ThreadPoolExecutor(max_workers=4) as pool:
-                        futs = {pool.submit(ai.make_tts, cfg, c["narration"], p / "work" / f"voice2_{int(c['no']):02d}.wav"): c["no"] for c in need}
+                        futs = {pool.submit(ai.make_tts, cfg, c["narration"], p / "work" / f"v_{cfg.get('tts_voice','Kore')}_{int(c['no']):02d}.wav"): c["no"] for c in need}
                         k = 0
                         for fu in as_completed(futs):
                             k += 1
@@ -598,7 +598,7 @@ if page == "③ 완성 영상":
                             assemble.run(["-i", str(mine[0]), "-ar", "24000", "-ac", "1", str(wav)])
                             audio = wav
                         else:
-                            wav = p / "work" / f"voice2_{no:02d}.wav"
+                            wav = p / "work" / f"v_{cfg.get('tts_voice','Kore')}_{no:02d}.wav"
                             (p / "work").mkdir(exist_ok=True)
                             if not wav.exists():
                                 log(f"컷 {no}: 나레이션 목소리 만드는 중")
