@@ -324,6 +324,31 @@ if page == "② 재료 만들기":
         st.divider()
 
         # ---- 플로우(무료) 한 번에: 전체 문구 + 한꺼번에 올리기 ----
+        with st.expander("🗑 여러 컷 재료 한꺼번에 지우기"):
+            have = [int(c["no"]) for c in data["cuts"]
+                    if cut_file(p, int(c["no"])) or (p / "재료" / f"{int(c['no']):02d}_첫장면.png").exists()]
+            vids_ = [int(c["no"]) for c in data["cuts"] if c["kind"] == "video" and int(c["no"]) in have]
+            imgs_ = [int(c["no"]) for c in data["cuts"] if c["kind"] == "image" and int(c["no"]) in have]
+            q1, q2, q3 = st.columns(3)
+            if q1.button(f"대사 컷 모두 고르기 {vids_}"):
+                st.session_state["del_pick"] = vids_
+            if q2.button(f"그림 컷 모두 고르기 {imgs_}"):
+                st.session_state["del_pick"] = imgs_
+            if q3.button("고르기 지우기"):
+                st.session_state["del_pick"] = []
+            st.session_state["del_pick"] = [x for x in st.session_state.get("del_pick", []) if x in have]
+            pick = st.multiselect("지울 컷 (재료가 있는 컷만 나와요)", have, key="del_pick")
+            also_still = st.checkbox("대사 컷의 '첫 장면 그림'도 같이 지우기", value=False)
+            if pick and st.button(f"🗑 컷 {pick} 재료 지우기", type="primary"):
+                for no in pick:
+                    for old_f in (p / "재료").glob(f"{no:02d}.*"):
+                        old_f.unlink()
+                    if also_still:
+                        for old_f in (p / "재료").glob(f"{no:02d}_첫장면.*"):
+                            old_f.unlink()
+                st.session_state["del_pick"] = []
+                st.success(f"컷 {pick} 재료를 지웠어요.")
+                st.rerun()
         with st.expander("🔪 여러 칸으로 나온 그림 나누기 (한 장에 장면 2~4개가 위아래로 쌓여 나왔을 때)"):
             st.caption("나눈 그림은 빈 그림 컷에 차례로 들어가요. 가로로 긴 그림은 영상에서 잘리지 않게 "
                        "가운데 크게 놓고 뒤는 흐리게 채워요.")
