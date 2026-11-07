@@ -135,6 +135,7 @@ SCRIPT_PROMPT = """당신은 조회수가 잘 나오는 한국 유튜브 스토�
  ]
 }}
 cuts는 정확히 {ncuts}개, 규칙의 컷 구성을 따르세요.
+line(대사)과 visual에는 돈·현금·병원·진료·수술·피·죽음·내놔·때리다·경찰 같은 격한 말을 쓰지 말고 부드러운 말로 바꿔 쓰세요(영상 도구가 거부함). 나레이션은 그대로 써도 됩니다.
 각 컷의 visual에는 시대·장소를 구체적으로 쓰세요(예: 1970s shabby thatched-roof mountain tavern, small dim-free room with paper doors). 각 컷의 visual은 서로 확실히 달라야 합니다 — 장소·행동·카메라 구도(클로즈업/전신/손 클로즈업 등)·등장인물 조합을 컷마다 바꾸고, 같은 문장을 되풀이하지 마세요."""
 
 
@@ -206,6 +207,11 @@ def write_script(cfg, channel, analysis="", topic=""):
                 have.append(t)
         data["tags"] = ",".join(have)
     data["format"] = channel.get("format", "shorts")
+    # 플로우가 거부하는 격한 단어를 대사·장면 묘사에서 부드럽게 (나레이션은 그대로)
+    from .soften import soften
+    for c in data.get("cuts", []):
+        c["line"] = soften(c.get("line", ""))
+        c["visual"] = soften(c.get("visual", ""))
     return data
 
 

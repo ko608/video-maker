@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
+from vm.soften import soften
 _T0 = time.time()
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -344,7 +345,7 @@ if page == "② 재료 만들기":
                                    "Do not add any other lines. "
                                    f"Scene {no}: {c['visual']}. Characters: {data.get('characters','')}. {style}. "
                                    "Natural lip sync, no background music, no subtitles, no text on screen.")
-                        ai.make_video(cfg, vprompt, p / "재료" / f"{no:02d}.mp4", first_frame=still, log=log)
+                        ai.make_video(cfg, soften(vprompt), p / "재료" / f"{no:02d}.mp4", first_frame=still, log=log)
                 except Exception as e:
                     log(f"컷 {no} 실패: {e}")
             log("끝! 아래에서 확인하세요.")
@@ -403,6 +404,7 @@ if page == "② 재료 만들기":
                 continue   # 대사 영상은 컷마다 시작 그림을 넣고 아래 짧은 문구로 따로 만들기
             else:
                 lines_all.append(f"{c['no']}번 [이미지] {c['visual']}")
+        lines_all = [soften(x) for x in lines_all]
         st.text_area("① 그림 컷 문구 전체 복사 → 플로우 채팅창에 한 번에 (대사 영상은 아래 컷마다 짧은 문구로)",
                      "\n".join(lines_all), height=220, key="flow_all")
         empty = [int(c["no"]) for c in data["cuts"] if not cut_file(p, int(c["no"]))]
@@ -445,6 +447,7 @@ if page == "② 재료 만들기":
                         f"\n[공통] {ratio_ko}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로 "
                         "(더 부유하거나 현대식으로 바꾸지 말 것), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, 자연스러운 피부). "
                         + f"등장인물: {data.get('characters','')}")
+            flow = soften(flow)
             m.text_area("플로우에 넣을 문구 (복사) — 맨 위가 이 컷만의 장면", flow, height=170, key=f"flow{no}")
             up = m.file_uploader("플로우에서 받은 파일 올리기", type=["png", "jpg", "jpeg", "webp", "mp4", "mov"], key=f"up{no}")
             if new_upload(f"{p.name}_{no}", up):
