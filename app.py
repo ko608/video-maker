@@ -346,7 +346,7 @@ if page == "② 재료 만들기":
                                    "Do not add any other lines. "
                                    f"Scene {no}: {c['visual']}. Characters: {data.get('characters','')}. {style}. "
                                    "Natural lip sync, no background music, no subtitles, no text on screen.")
-                        ai.make_video(cfg, soften(vprompt), p / "재료" / f"{no:02d}.mp4", first_frame=still, log=log)
+                        ai.make_video(cfg, soften(vprompt), p / "재료" / f"{no:02d}.mp4", first_frame=still, aspect=aspect, log=log)
                 except Exception as e:
                     log(f"컷 {no} 실패: {e}")
             log("끝! 아래에서 확인하세요.")
@@ -440,7 +440,7 @@ if page == "② 재료 만들기":
             l.write(c.get("line") or c.get("narration", ""))
             if c["kind"] == "video":
                 # 플로우 영상은 짧게 — 시작 그림이 인물·배경을 이미 담고 있음 (긴 문구는 거절되기 쉬움)
-                flow = (f"첨부한 시작 그림에서 이어지는 4초 영상. {c['visual']}\n"
+                flow = (f"첨부한 시작 그림에서 이어지는 {ratio_ko} 4초 영상. {c['visual']}\n"
                         f"{c.get('speaker','')} 말함: \"{c['line']}\"\n"
                         "다른 사람은 말하지 않음. 밝고 환한 분위기, 자막 없이.")
             else:
@@ -606,6 +606,8 @@ if page == "③ 완성 영상":
                             audio = wav
                     cuts.append(dict(media=media, audio=audio, text=c.get("line") or c.get("narration", "")))
                 assemble.set_format(fmt)
+                if any(c["kind"] == "video" for c in data["cuts"]):
+                    assemble.FPS = 30      # 대사 영상이 있으면 부드럽게 30프레임
                 cfg2 = dict(cfg)
                 if fmt == "longform":   # 가로 영상: 자막은 아래쪽, 한 줄 길게
                     cfg2.update(subtitle_y=0.86, subtitle_size=58, subtitle_chars=24)

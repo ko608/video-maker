@@ -173,12 +173,16 @@ LONG_SCRIPT_PROMPT = """당신은 조회수가 잘 나오는 한국 유튜브 '�
  "thumbnail": ["윗줄 8자 이내(상황)", "핵심 한마디 6~8자(가장 궁금한 대사·반전)", ""],
  "music_mood": "배경음악 분위기 한 줄",
  "characters": "등장인물 외모 설명(영어, 모든 장면에서 같은 사람으로 보이게): 이름·나이·머리·옷",
+ "opening": [
+  {{"line": "첫 장면 대사(15자 안팎, 갈등이 바로 터지는 말)", "speaker": "누가 누구에게", "speaker_en": "English: ONLY the person who speaks + look", "visual": "영어 장면 묘사"}}
+ ],
  "chapters": [
   {{"title": "장 제목(짧게)", "cuts": [
     {{"narration": "나레이션 150~230자. 인물 대사는 “둥근 따옴표”로 넣어 생생하게(곧은 따옴표는 절대 쓰지 말 것)", "visual": "영어 장면 묘사: 시대·장소 구체적으로, 인물·행동·표정, 카메라 구도"}}
   ]}}
  ]
 }}
+opening은 영상 맨 앞에 들어갈 '대사 영상' {nopen}개입니다(각 4~6초). 이야기의 가장 강렬한 갈등 순간을 대사로 먼저 보여 줘서 시청자를 붙잡고, 그 뒤 1장 나레이션이 '사건은 그날 아침부터 시작됐습니다'처럼 이어받게 하세요. 대사에는 돈·병원·내놔 같은 격한 말 대신 부드러운 말을 쓰세요.
 chapters는 {nchap}개, 전체 cuts 합계는 정확히 {ncuts}개 안팎(장마다 비슷하게 나눔). 나레이션은 컷마다 150~230자를 꼭 지켜 전체 길이를 맞추세요.
 각 장의 마지막 컷 나레이션은 다음 장이 궁금해지는 한 문장('그런데 그날 밤, …')으로 끝내세요.
 컷마다 visual은 서로 확실히 달라야 합니다(장소·구도·인물 조합을 바꿀 것)."""
@@ -188,9 +192,14 @@ def _write_long(cfg, channel, analysis, topic):
     prompt = LONG_SCRIPT_PROMPT.format(
         name=channel["name"], rules="\n".join("- " + r for r in channel["rules"]),
         analysis=analysis or "(분석 없음)", topic=topic or "(자유 주제)",
-        ncuts=channel["cuts"], nchap=channel.get("chapters", 5))
+        ncuts=channel["cuts"], nchap=channel.get("chapters", 5), nopen=int(channel.get("opening_videos", 3)))
     data = _json_from(_claude(cfg, prompt, max_tokens=min(64000, int(channel['cuts']) * 450 + 3000)))
     cuts, n = [], 0
+    for o in data.get("opening", [])[:int(channel.get("opening_videos", 3))]:
+        n += 1
+        cuts.append({"no": n, "kind": "video", "chapter": "", "line": o.get("line", ""), "speaker": o.get("speaker", ""),
+                     "speaker_en": o.get("speaker_en", ""), "narration": "", "visual": o.get("visual", "")})
+    first_chapter = True
     for ch in data.get("chapters", []):
         for i, c in enumerate(ch.get("cuts", [])):
             n += 1
@@ -198,6 +207,7 @@ def _write_long(cfg, channel, analysis, topic):
                          "line": "", "speaker": "", "narration": c.get("narration", ""), "visual": c.get("visual", "")})
     data["cuts"] = cuts
     data.pop("chapters", None)
+    data.pop("opening", None)
     return data
 
 
