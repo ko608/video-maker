@@ -277,7 +277,7 @@ if page == "② 재료 만들기":
                         continue
                     base = (f"Scene {no}: {c['visual']}. Style: {style}. Characters: {data.get('characters','')}. "
                             "Ordinary everyday Korean people with average, natural faces, light natural makeup, "
-                            "realistic skin texture")
+                            "realistic skin texture. ONE single scene in one frame — no collage, no panels, no split screen, no comic layout")
                     jobs[pool.submit(ai.make_image, cfg, base, p / "재료" / f"{no:02d}.png", aspect, ref)] = no
                 log(f"그림 {len(jobs)}장을 4장씩 동시에 만드는 중…")
                 done_n = 0
@@ -293,7 +293,7 @@ if page == "② 재료 만들기":
                     continue
                 base = (f"Scene {no}: {c['visual']}. Style: {style}. Characters: {data.get('characters','')}. "
                         "Ordinary everyday Korean people with average, natural faces, light natural makeup, "
-                        "realistic skin texture")
+                        "realistic skin texture. ONE single scene in one frame — no collage, no panels, no split screen, no comic layout")
                 try:
                     if c["kind"] == "image":
                         log(f"컷 {no}: 이미지 만드는 중")
@@ -325,7 +325,7 @@ if page == "② 재료 만들기":
 
         # ---- 플로우(무료) 한 번에: 전체 문구 + 한꺼번에 올리기 ----
         st.markdown("### 🆓 플로우로 한 번에 만들기 (무료)")
-        common = (f"{ratio_ko}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로(옛날 초가 주막이면 허름한 초가 그대로 — 더 부유하거나 현대식으로 바꾸지 말 것), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, "
+        common = (f"{ratio_ko}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로(옛날 초가 주막이면 허름한 초가 그대로 — 더 부유하거나 현대식으로 바꾸지 말 것), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, "
                   f"자연스러운 피부). 모든 장면에서 같은 인물: {data.get('characters','')}")
         lines_all = [f"아래 그림들을 순서대로 만들어 줘. 첨부한 인물 기준 그림과 똑같은 사람(얼굴·머리·옷)으로 — 기준 그림의 왼쪽부터 등장인물 설명 순서대로. 여러 명이 나오는 장면도 각자 기준 그림의 그 사람으로. 공통: {common}", ""]
         for c in data["cuts"]:
@@ -373,7 +373,7 @@ if page == "② 재료 만들기":
             else:
                 flow = (f"[컷 {no} 장면] {c['visual']}"
                         f"\n[공통] {ratio_ko}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로 "
-                        "(더 부유하거나 현대식으로 바꾸지 말 것), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, 자연스러운 피부). "
+                        "(더 부유하거나 현대식으로 바꾸지 말 것), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, 자연스러운 피부). "
                         + f"등장인물: {data.get('characters','')}")
             m.text_area("플로우에 넣을 문구 (복사) — 맨 위가 이 컷만의 장면", flow, height=170, key=f"flow{no}")
             up = m.file_uploader("플로우에서 받은 파일 올리기", type=["png", "jpg", "jpeg", "webp", "mp4", "mov"], key=f"up{no}")
