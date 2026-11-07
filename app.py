@@ -409,26 +409,46 @@ if page == "② 재료 만들기":
         st.text_area("① 그림 컷 문구 전체 복사 → 플로우 채팅창에 한 번에 (대사 영상은 아래 컷마다 짧은 문구로)",
                      "\n".join(lines_all), height=220, key="flow_all")
         empty = [int(c["no"]) for c in data["cuts"] if not cut_file(p, int(c["no"]))]
-        ups = st.file_uploader(f"② 플로우에서 받은 파일들을 한꺼번에 올리기 — 빈 컷 {empty} 에 "
-                               "그림은 그림 컷, 영상은 대사 컷 순서대로 들어가요 (파일 이름 순)",
+        ups = st.file_uploader("② 플로우에서 받은 파일들을 한꺼번에 올리기 — 올린 뒤 그림을 보고 컷 번호만 골라 주세요",
                                type=["png", "jpg", "jpeg", "webp", "mp4", "mov"],
                                accept_multiple_files=True, key="bulk_up")
-        if ups and st.button("📥 올린 파일들 컷에 넣기", type="primary"):
-            vids = sorted([u for u in ups if Path(u.name).suffix.lower() in (".mp4", ".mov")], key=lambda u: u.name)
-            pics = sorted([u for u in ups if u not in vids], key=lambda u: u.name)
-            done = []
-            for c in data["cuts"]:
-                no = int(c["no"])
-                if cut_file(p, no):
-                    continue
-                pool = vids if c["kind"] == "video" else pics
-                if not pool:
-                    continue
-                u = pool.pop(0)
-                (p / "재료" / f"{no:02d}{Path(u.name).suffix.lower()}").write_bytes(u.getbuffer())
-                done.append(no)
-            st.success(f"컷 {done} 에 넣었어요. 순서가 틀린 컷은 아래에서 지우고 다시 올리세요.")
-            st.rerun()
+        if ups:
+            vid_cuts = [int(c["no"]) for c in data["cuts"] if c["kind"] == "video" and not cut_file(p, int(c["no"]))]
+            img_cuts = [int(c["no"]) for c in data["cuts"] if c["kind"] == "image" and not cut_file(p, int(c["no"]))]
+            all_nos = ["넣지 않음"] + [int(c["no"]) for c in data["cuts"]]
+            st.caption("파일마다 들어갈 컷을 골라 주세요. (처음엔 빈 컷 순서대로 미리 골라 둠)")
+            plan, vi, ii = {}, 0, 0
+            cols = st.columns(4)
+            for k, u in enumerate(ups):
+                is_v = Path(u.name).suffix.lower() in (".mp4", ".mov")
+                if is_v:
+                    guess = vid_cuts[vi] if vi < len(vid_cuts) else "넣지 않음"; vi += 1
+                else:
+                    guess = img_cuts[ii] if ii < len(img_cuts) else "넣지 않음"; ii += 1
+                box = cols[k % 4]
+                if is_v:
+                    box.markdown(f"🎬 **영상**  \n{u.name[:18]}")
+                else:
+                    try:
+                        from PIL import Image as _I
+                        import io
+                        im = _I.open(io.BytesIO(u.getvalue())); im.thumbnail((240, 420))
+                        box.image(im, width="stretch")
+                    except Exception:
+                        box.write(u.name[:18])
+                plan[k] = box.selectbox("컷", all_nos, index=all_nos.index(guess), key=f"assign_{k}_{u.name}",
+                                        label_visibility="collapsed")
+            if st.button("📥 고른 컷에 넣기", type="primary"):
+                done = []
+                for k, u in enumerate(ups):
+                    no = plan[k]
+                    if no == "넣지 않음":
+                        continue
+                    for old in (p / "재료").glob(f"{int(no):02d}.*"):
+                        old.unlink()
+                    (p / "재료" / f"{int(no):02d}{Path(u.name).suffix.lower()}").write_bytes(u.getbuffer())
+                    done.append(no)
+                st.success(f"컷 {done} 에 넣었어요.")
         st.divider()
         for c in data["cuts"]:
             no = int(c["no"])
