@@ -83,6 +83,38 @@ def subtitle_png(text, out_path, cfg):
     img.save(out_path)
 
 
+def _img_size(path):
+    try:
+        with Image.open(path) as im:
+            return im.size
+    except Exception:
+        return (0, 0)
+
+
+def split_panels(path, n, out_dir, start_name="panel"):
+    """여러 칸(위아래로 쌓인) 그림을 n장으로 나누기 — 칸 사이 경계를 찾아서 자름"""
+    im = Image.open(path).convert("RGB")
+    w, h = im.size
+    gray = im.convert("L").resize((max(1, w // 8), h))
+    # 줄마다 밝기 변화가 큰 곳(칸 경계) 찾기 — 못 찾으면 똑같이 나눔
+    import statistics
+    rows = [list(gray.crop((0, y, gray.width, y + 1)).getdata()) for y in range(h)]
+    diff = [0] + [sum(abs(a - b) for a, b in zip(rows[y], rows[y - 1])) for y in range(1, h)]
+    cuts = []
+    for k in range(1, n):
+        guess = h * k // n
+        lo, hi = max(1, guess - h // (n * 6)), min(h - 1, guess + h // (n * 6))
+        y = max(range(lo, hi), key=lambda yy: diff[yy])
+        cuts.append(y if diff[y] > statistics.mean(diff) * 4 else guess)
+    bounds = [0] + cuts + [h]
+    outs = []
+    for i in range(n):
+        piece = im.crop((0, bounds[i] + 2, w, bounds[i + 1] - 2))
+        o = Path(out_dir) / f"{start_name}_{i + 1}.png"
+        piece.save(o); outs.append(o)
+    return outs
+
+
 # ---------------- 장면 하나 만들기 ----------------
 def build_segment(work: Path, idx, cut, cfg, log=print):
     """cut: kind, media(파일), audio(나레이션 wav 또는 없음), text(자막 문장)"""
@@ -124,7 +156,14 @@ def build_segment(work: Path, idx, cut, cfg, log=print):
                         f"zoompan=z='min(zoom+{0.13 / max(frames, 1):.6f},1.15)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={W}x{H}:fps={FPS},"
                         f"setsar=1[v0]")
         else:                                   # 고정 그림 (훨씬 빠름)
-            filt.append(f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS},setsar=1[v0]")
+            iw, ih = _img_size(media)
+            if iw and ih and (iw / ih) / (W / H) > 1.4:
+                # 가로 그림을 세로 영상에 → 잘라 버리지 않고 가운데 크게 + 뒤는 흐린 배경 (인물이 안 잘림)
+                filt.append(f"[0:v]split=2[bg0][fg0];"
+                            f"[bg0]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},boxblur=30:2,eq=brightness=0.06[bg];"
+                            f"[fg0]scale={W}:-2[fg];[bg][fg]overlay=0:(H-h)/2,fps={FPS},setsar=1[v0]")
+            else:
+                filt.append(f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS},setsar=1[v0]")
     n_in = 1
     # 오디오 입력
     if audio:

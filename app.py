@@ -324,6 +324,22 @@ if page == "② 재료 만들기":
         st.divider()
 
         # ---- 플로우(무료) 한 번에: 전체 문구 + 한꺼번에 올리기 ----
+        with st.expander("🔪 여러 칸으로 나온 그림 나누기 (한 장에 장면 2~4개가 위아래로 쌓여 나왔을 때)"):
+            st.caption("나눈 그림은 빈 그림 컷에 차례로 들어가요. 가로로 긴 그림은 영상에서 잘리지 않게 "
+                       "가운데 크게 놓고 뒤는 흐리게 채워요.")
+            sp = st.file_uploader("여러 칸 그림 올리기", type=["png", "jpg", "jpeg", "webp"], key="split_up")
+            npan = st.radio("몇 칸인가요?", [2, 3, 4], index=1, horizontal=True, key="split_n")
+            if sp is not None and st.button("🔪 나눠서 빈 컷에 넣기"):
+                tmp = p / "work"; tmp.mkdir(exist_ok=True)
+                src = tmp / ("split_src" + Path(sp.name).suffix.lower()); src.write_bytes(sp.getbuffer())
+                pieces = assemble.split_panels(src, int(npan), tmp, "split")
+                empties = [int(c["no"]) for c in data["cuts"] if c["kind"] == "image" and not cut_file(p, int(c["no"]))]
+                if not empties:
+                    empties = [int(c["no"]) for c in data["cuts"] if not cut_file(p, int(c["no"]))]
+                put = []
+                for pc, no in zip(pieces, empties):
+                    (p / "재료" / f"{no:02d}.png").write_bytes(pc.read_bytes()); put.append(no)
+                st.success(f"{len(pieces)}장으로 나눠 컷 {put} 에 넣었어요." + ("" if len(put) == len(pieces) else " (빈 컷이 모자라 일부는 안 넣었어요)"))
         st.markdown("### 🆓 플로우로 한 번에 만들기 (무료)")
         common = (f"{ratio_ko}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로(옛날 초가 주막이면 허름한 초가 그대로 — 더 부유하거나 현대식으로 바꾸지 말 것), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, "
                   f"자연스러운 피부). 모든 장면에서 같은 인물: {data.get('characters','')}")
