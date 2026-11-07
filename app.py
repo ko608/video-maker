@@ -662,9 +662,35 @@ if page == "⚙️ 설정":
     new["image_size"] = st.radio("그림 해상도 (자동 그림)", ["1K", "2K"], horizontal=True,
                                  index=["1K", "2K"].index(cfg.get("image_size", "2K")) if cfg.get("image_size", "2K") in ("1K", "2K") else 1,
                                  help="1K = 비용 절약(롱폼 추천), 2K = 더 선명(쇼츠 썸네일용)")
-    with st.expander("목소리·자막·음악"):
-        new["tts_voice"] = st.text_input("목소리 이름 (Kore, Aoede, Charon, Puck 등)", cfg["tts_voice"])
+    with st.expander("🔊 나레이션 목소리 고르기 (들어 보기)", expanded=True):
+        VOICES = {
+            "Kore": "여성 · 단단하고 또렷함", "Aoede": "여성 · 산뜻하고 가벼움", "Leda": "여성 · 젊고 밝음",
+            "Zephyr": "여성 · 밝고 경쾌함", "Sulafat": "여성 · 따뜻함", "Despina": "여성 · 부드러움",
+            "Gacrux": "여성 · 차분하고 성숙함", "Vindemiatrix": "여성 · 다정하고 온화함", "Achernar": "여성 · 부드럽고 차분함",
+            "Charon": "남성 · 설명하듯 차분함", "Puck": "남성 · 밝고 경쾌함", "Orus": "남성 · 단단함",
+            "Fenrir": "남성 · 흥분된·생동감", "Achird": "남성 · 친근함", "Algenib": "남성 · 걸걸하고 굵음",
+            "Schedar": "남성 · 고르고 담담함", "Sadaltager": "남성 · 지적이고 믿음직함", "Enceladus": "남성 · 숨결 섞인 낮은 톤",
+        }
+        cur = cfg.get("tts_voice", "Kore")
+        names = list(VOICES) + ([cur] if cur not in VOICES else [])
+        new["tts_voice"] = st.selectbox("목소리", names, index=names.index(cur),
+                                        format_func=lambda v: f"{v} — {VOICES.get(v, '직접 입력한 목소리')}")
         new["tts_style"] = st.text_area("말투 지시", cfg["tts_style"])
+        sample = st.text_input("들어 볼 문장", "그날 밤, 어머니는 아무 말 없이 밥상을 차리셨습니다. 그런데 그 밥그릇은… 아버지 것이었습니다.")
+        sdir = config.ROOT / "voice_samples"; sdir.mkdir(exist_ok=True)
+        if st.button("🔊 이 목소리로 들어 보기 (한 번에 1~2원)"):
+            import hashlib
+            key = hashlib.md5(f"{new['tts_voice']}|{new['tts_style']}|{sample}".encode()).hexdigest()[:10]
+            out = sdir / f"{new['tts_voice']}_{key}.wav"
+            try:
+                if not out.exists():
+                    with st.spinner("목소리 만드는 중…"):
+                        ai.make_tts(dict(cfg, **new), sample, out)
+                st.audio(str(out))
+                st.caption("마음에 들면 아래 '💾 설정 저장'을 누르세요. 다음 영상부터 이 목소리로 나와요.")
+            except Exception as e:
+                st.error(f"오류: {e}")
+    with st.expander("자막·음악"):
         new["font_path"] = st.text_input("자막 글꼴 파일", cfg["font_path"])
         new["subtitle_size"] = st.slider("자막 크기", 50, 110, int(cfg["subtitle_size"]))
         new["subtitle_y"] = st.slider("자막 높이 (0.5=정중앙)", 0.3, 0.8, float(cfg["subtitle_y"]))
