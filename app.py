@@ -433,8 +433,8 @@ if page == "② 재료 만들기":
                         r.video(str(f))
                 else:
                     show_small(r, f)
-                if r.button("🗑 이 재료 지우기", key=f"del{no}"):
-                    f.unlink(); st.rerun()
+                if r.button(f"🗑 컷 {no} 재료 지우기", key=f"del{no}"):
+                    f.unlink(); st.session_state.pop(f"_up_{p.name}_{no}", None); st.rerun()
             else:
                 still = p / "재료" / f"{no:02d}_첫장면.png"
                 if c["kind"] == "video" and still.exists():
@@ -442,6 +442,8 @@ if page == "② 재료 만들기":
                     r.download_button("⬇ 첫 장면 그림 받기", still.read_bytes(), file_name=f"컷{no}_첫장면.png",
                                       mime="image/png", key=f"dl{no}")
                     r.warning("대사 영상을 플로우에서 만들어 올려 주세요")
+                    if r.button(f"🗑 컷 {no} 첫 장면 그림 지우기", key=f"delst{no}"):
+                        still.unlink(); st.rerun()
                 else:
                     r.warning("아직 재료 없음")
         if st.button("📂 재료 폴더 열기"):
