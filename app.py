@@ -101,8 +101,9 @@ def cut_file(p, no):
 
 ART_STYLES = {
     "반실사 일러스트": ("Semi-realistic digital painting style (between a photo and an illustration): soft smooth shading, "
-                  "clean simplified backgrounds, warm gentle colors, smooth skin, polished and tidy, NOT a photograph",
-                  "반실사 디지털 그림체(사진과 그림의 중간, 부드러운 채색, 깔끔하고 단순한 배경, 매끈한 피부, 사진 같지 않게)"),
+                  "clean simplified backgrounds, warm gentle colors, smooth skin, polished and tidy, NOT a photograph; "
+                  "the person is crisp and sharp with clear outlines and good contrast, background evenly lit — no glow, no bloom, no haze, no blown-out window light",
+                  "반실사 디지털 그림체(사진과 그림의 중간, 부드러운 채색, 깔끔하고 단순한 배경, 매끈한 피부, 사진 같지 않게), 인물은 윤곽이 또렷하고 선명하게, 배경 빛 번짐·뿌연 느낌·과한 햇살 없이"),
     "깔끔한 드라마 사진풍": ("Clean polished Korean TV drama still photo: smooth even skin, no grit, no film grain, tidy simple background",
                      "깔끔한 드라마 사진풍(매끈한 피부, 거친 질감·지저분한 배경 없이)"),
     "웹툰풍": ("Korean webtoon art style: clean line art, bright flat colors, expressive faces, simple backgrounds",
@@ -834,7 +835,7 @@ if page == "⚙️ 설정":
     new["art_style"] = st.radio("🎨 그림 느낌", names_, horizontal=True,
                                 index=names_.index(cfg.get("art_style", "반실사 일러스트")) if cfg.get("art_style", "반실사 일러스트") in names_ else 0)
     new["brighten"] = st.slider("☀️ 화면 밝게 (완성 영상에서 그림·영상을 환하게 보정, 0 = 보정 안 함)", 0, 10,
-                                int(cfg.get("brighten", 5)))
+                                int(cfg.get("brighten", 2)))
     new["image_size"] = st.radio("그림 해상도 (자동 그림)", ["1K", "2K"], horizontal=True,
                                  index=["1K", "2K"].index(cfg.get("image_size", "2K")) if cfg.get("image_size", "2K") in ("1K", "2K") else 1,
                                  help="1K = 비용 절약(롱폼 추천), 2K = 더 선명(쇼츠 썸네일용)")

@@ -92,7 +92,7 @@ def subtitle_png(text, out_path, cfg):
 
 def _bright(cfg):
     """화면 밝기 보정 — AI 그림·영상이 어둡게 나와도 환하게 (설정의 '화면 밝게' 0~10)"""
-    lv = float(cfg.get("brighten", 5))
+    lv = float(cfg.get("brighten", 2))
     if lv <= 0:
         return ""
     g = 1 + 0.05 * lv          # 어두운 부분을 들어 올림 (5 → 1.25)

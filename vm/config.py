@@ -36,7 +36,7 @@ DEFAULTS = {
     "subtitle_y": 0.55,     # 자막 높이 (0=맨 위, 1=맨 아래). 쇼츠는 화면 중간쯤
     "video_seconds": 4,
     "image_size": "2K",
-    "brighten": 5,          # 완성 영상 밝기 보정 (0~10)
+    "brighten": 2,          # 완성 영상 밝기 보정 (0~10)
     "art_style": "반실사 일러스트",
 }
 
@@ -51,6 +51,8 @@ def load():
     for k in ("gemini_text_model", "gemini_image_model", "gemini_tts_model"):
         if str(data.get(k, "")).startswith("gemini-2.5") or data.get(k) == "gemini-flash-latest":
             data[k] = DEFAULTS[k]
+    if data.get("brighten") == 5 and not data.get("_brighten_v2"):   # 예전 기본값 5 → 2 (너무 뿌옇게 나와서)
+        data["brighten"] = 2
     return data
 
 def save(data):
