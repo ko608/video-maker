@@ -99,6 +99,21 @@ def cut_file(p, no):
     return None
 
 
+ART_STYLES = {
+    "반실사 일러스트": ("Semi-realistic digital painting style (between a photo and an illustration): soft smooth shading, "
+                  "clean simplified backgrounds, warm gentle colors, smooth skin, polished and tidy, NOT a photograph",
+                  "반실사 디지털 그림체(사진과 그림의 중간, 부드러운 채색, 깔끔하고 단순한 배경, 매끈한 피부, 사진 같지 않게)"),
+    "깔끔한 드라마 사진풍": ("Clean polished Korean TV drama still photo: smooth even skin, no grit, no film grain, tidy simple background",
+                     "깔끔한 드라마 사진풍(매끈한 피부, 거친 질감·지저분한 배경 없이)"),
+    "웹툰풍": ("Korean webtoon art style: clean line art, bright flat colors, expressive faces, simple backgrounds",
+            "한국 웹툰 그림체(깔끔한 선, 밝은 색, 표정이 풍부하게, 단순한 배경)"),
+}
+
+
+def art_style(cfg):
+    return ART_STYLES.get(cfg.get("art_style", "반실사 일러스트"), ART_STYLES["반실사 일러스트"])
+
+
 EXTRA = ["b", "c"]   # 그림 컷의 두 번째·세 번째 화면 파일: 02_b.png, 02_c.png
 
 
@@ -143,7 +158,7 @@ def thumb_prompt(data, fmt, style):
             "Other characters may appear small and softly blurred behind. "
             f"Strong clear emotion that fits this hook: '{hook}' (shock, tears, anger or surprise). "
             "Very bright high-key lighting, bright clean background softly blurred, vivid but natural colors, "
-            "sharp eyes. Ordinary everyday Korean person with a natural face. "
+            "sharp eyes. Ordinary everyday Korean person with a natural face. " + art_style(cfg)[0] + ". "
             f"Characters: {data.get('characters','')}. Keep the setting's era as in the story. "
             "One single image, no collage, no text, no watermark.")
 
@@ -293,7 +308,7 @@ if page == "② 재료 만들기":
         aspect = "16:9" if fmt == "longform" else "9:16"
         ratio_ko = "가로 16:9" if fmt == "longform" else "세로 9:16"
         chs_by_id = {c["id"]: c for c in channels().values()}
-        style = chs_by_id.get(data.get("channel"), {}).get("visual_style", "photorealistic, vertical 9:16, no text")
+        style = art_style(cfg)[0] + ". " + chs_by_id.get(data.get("channel"), {}).get("visual_style", "vertical 9:16, no text")
         st.markdown("**방법 A — 자동(API, 유료)**: 버튼 하나로 이미지·대사 영상을 만듭니다.  \n"
                     "**방법 B — 플로우(무료)**: 아래 문구를 플로우에 넣어 만든 뒤, 컷마다 파일을 올리세요.")
         # ---- 👤 등장인물 기준 그림: 모든 컷에서 같은 사람 나오게 ----
@@ -340,7 +355,7 @@ if page == "② 재료 만들기":
                             continue
                         base = (f"Scene {no}: {vis}. Style: {style}. Characters: {data.get('characters','')}. "
                                 "Ordinary everyday Korean people with average, natural faces, light natural makeup, "
-                                "realistic skin texture. ONE single scene in one frame — no collage, no panels, no split screen, no comic layout")
+                                "tidy look. ONE single scene in one frame — no collage, no panels, no split screen, no comic layout")
                         jobs[pool.submit(ai.make_image, cfg, base, target, aspect, ref)] = f"{no}{'-' + tag if tag else ''}"
                 log(f"그림 {len(jobs)}장을 4장씩 동시에 만드는 중…")
                 done_n = 0
@@ -356,7 +371,7 @@ if page == "② 재료 만들기":
                     continue
                 base = (f"Scene {no}: {c['visual']}. Style: {style}. Characters: {data.get('characters','')}. "
                         "Ordinary everyday Korean people with average, natural faces, light natural makeup, "
-                        "realistic skin texture. ONE single scene in one frame — no collage, no panels, no split screen, no comic layout")
+                        "tidy look. ONE single scene in one frame — no collage, no panels, no split screen, no comic layout")
                 try:
                     if c["kind"] == "image":
                         log(f"컷 {no}: 이미지 만드는 중")
@@ -431,7 +446,7 @@ if page == "② 재료 만들기":
                     (p / "재료" / f"{no:02d}.png").write_bytes(pc.read_bytes()); put.append(no)
                 st.success(f"{len(pieces)}장으로 나눠 컷 {put} 에 넣었어요." + ("" if len(put) == len(pieces) else " (빈 컷이 모자라 일부는 안 넣었어요)"))
         st.markdown("### 🆓 플로우로 한 번에 만들기 (무료)")
-        common = (f"{ratio_ko}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로(옛날 초가 주막이면 허름한 초가 그대로 — 더 부유하거나 현대식으로 바꾸지 말 것), 정지 그림은 음식 클로즈업이나 인물 얼굴 클로즈업(멀리서 형체만 보이는 장면 금지), 인물은 옛날 이야기라도 단정하고 깔끔하게, 얼굴은 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷하게 보여 감정이 읽히게), 두 사람이면 한 사람 얼굴을 크게 앞에·상대는 뒤에 작고 흐리게, 주변은 흐리고 단순하게(지저분한 물건 없이), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, "
+        common = (f"{ratio_ko}, {art_style(cfg)[1]}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로(옛날 초가 주막이면 허름한 초가 그대로 — 더 부유하거나 현대식으로 바꾸지 말 것), 정지 그림은 음식 클로즈업이나 인물 얼굴 클로즈업(멀리서 형체만 보이는 장면 금지), 인물은 옛날 이야기라도 단정하고 깔끔하게, 얼굴은 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷하게 보여 감정이 읽히게), 두 사람이면 한 사람 얼굴을 크게 앞에·상대는 뒤에 작고 흐리게, 주변은 흐리고 단순하게(지저분한 물건 없이), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, "
                   f"자연스러운 피부). 모든 장면에서 같은 인물: {data.get('characters','')}")
         lines_all = [f"아래 그림들을 순서대로 만들어 줘. 첨부한 인물 기준 그림과 똑같은 사람(얼굴·머리·옷)으로 — 기준 그림의 왼쪽부터 등장인물 설명 순서대로. 여러 명이 나오는 장면도 각자 기준 그림의 그 사람으로. 공통: {common}", ""]
         vid_lines = ["아래 영상들을 차례로 만들어 줘. 각 영상은 위에서 만든 같은 번호의 '시작 그림'에서 이어지게. "
@@ -544,11 +559,12 @@ if page == "② 재료 만들기":
                 # 플로우 영상은 짧게 — 시작 그림이 인물·배경을 이미 담고 있음 (긴 문구는 거절되기 쉬움)
                 flow = (f"첨부한 시작 그림에서 이어지는 {ratio_ko} {ai.video_seconds_for(c.get('line'))}초 영상. {c['visual']}\n"
                         f"{c.get('speaker','')} 말함: \"{c['line']}\"\n"
-                        "다른 사람은 말하지 않음. 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷), 상대는 뒤에 흐리게. 밝고 환한 분위기, 자막 없이.")
+                        "다른 사람은 말하지 않음. 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷), 상대는 뒤에 흐리게. "
+                        f"시작 그림과 같은 그림체({art_style(cfg)[1].split('(')[0]}), 밝고 환한 분위기, 자막 없이.")
             else:
                 flow = (f"[컷 {no} 장면] {c['visual']}"
                         + "".join(f"\n[컷 {no}-{k_} 장면] {v_}" for k_, v_ in enumerate(c.get("shots") or [], 2))
-                        + f"\n[공통] {ratio_ko}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로 "
+                        + f"\n[공통] {ratio_ko}, {art_style(cfg)[1]}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로 "
                         "(더 부유하거나 현대식으로 바꾸지 말 것), 정지 그림은 음식 클로즈업이나 인물 얼굴 클로즈업(멀리서 형체만 보이는 장면 금지), 인물은 옛날 이야기라도 단정하고 깔끔하게, 얼굴은 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷하게 보여 감정이 읽히게), 두 사람이면 한 사람 얼굴을 크게 앞에·상대는 뒤에 작고 흐리게, 주변은 흐리고 단순하게(지저분한 물건 없이), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, 자연스러운 피부). "
                         + f"등장인물: {data.get('characters','')}")
             flow = soften(flow)
@@ -779,6 +795,9 @@ if page == "⚙️ 설정":
         for k in ["claude_model", "gemini_text_model", "gemini_image_model", "gemini_tts_model", "veo_model"]:
             new[k] = st.text_input(k, cfg[k])
         new["video_seconds"] = st.selectbox("대사 영상 길이(초)", [4, 6, 8], index=[4, 6, 8].index(int(cfg["video_seconds"])))
+    names_ = list(ART_STYLES)
+    new["art_style"] = st.radio("🎨 그림 느낌", names_, horizontal=True,
+                                index=names_.index(cfg.get("art_style", "반실사 일러스트")) if cfg.get("art_style", "반실사 일러스트") in names_ else 0)
     new["brighten"] = st.slider("☀️ 화면 밝게 (완성 영상에서 그림·영상을 환하게 보정, 0 = 보정 안 함)", 0, 10,
                                 int(cfg.get("brighten", 5)))
     new["image_size"] = st.radio("그림 해상도 (자동 그림)", ["1K", "2K"], horizontal=True,

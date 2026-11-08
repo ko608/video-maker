@@ -37,6 +37,7 @@ DEFAULTS = {
     "video_seconds": 4,
     "image_size": "2K",
     "brighten": 5,          # 완성 영상 밝기 보정 (0~10)
+    "art_style": "반실사 일러스트",
 }
 
 def load():
