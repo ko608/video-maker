@@ -90,6 +90,16 @@ def subtitle_png(text, out_path, cfg):
     img.save(out_path)
 
 
+def _bright(cfg):
+    """화면 밝기 보정 — AI 그림·영상이 어둡게 나와도 환하게 (설정의 '화면 밝게' 0~10)"""
+    lv = float(cfg.get("brighten", 5))
+    if lv <= 0:
+        return ""
+    g = 1 + 0.05 * lv          # 어두운 부분을 들어 올림 (5 → 1.25)
+    b = 0.012 * lv             # 전체 밝기 (5 → 0.06)
+    return f",eq=gamma={g:.2f}:brightness={b:.3f}:saturation=1.05"
+
+
 def _img_size(path):
     try:
         with Image.open(path) as im:
@@ -153,7 +163,7 @@ def build_segment(work: Path, idx, cut, cfg, log=print):
     if is_video:
         args += ["-i", str(media)]
         filt.append(f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS},setsar=1,"
-                    f"tpad=stop_mode=clone:stop_duration={max(0, dur - vdur):.2f}[v0]")
+                    f"tpad=stop_mode=clone:stop_duration={max(0, dur - vdur):.2f}{_bright(cfg)}[v0]")
     else:
         # 그림 컷: 그림이 여러 장이면 나눠서 번갈아 보여 줌 (5~6초마다 화면 바뀜) + 천천히 움직임
         imgs = [media] + [Path(x) for x in cut.get("extras", []) if Path(x).exists()]
@@ -181,7 +191,7 @@ def build_segment(work: Path, idx, cut, cfg, log=print):
             else:
                 filt.append(base + f";[b{j}]fps={FPS},setsar=1[p{j}]")
             labels.append(f"[p{j}]")
-        filt.append("".join(labels) + f"concat=n={k}:v=1:a=0,fps={FPS},format=yuv420p[v0]")
+        filt.append("".join(labels) + f"concat=n={k}:v=1:a=0,fps={FPS},format=yuv420p{_bright(cfg)}[v0]")
     n_in = (1 if is_video else len(imgs))
     # 오디오 입력
     if audio:

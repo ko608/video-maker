@@ -779,6 +779,8 @@ if page == "⚙️ 설정":
         for k in ["claude_model", "gemini_text_model", "gemini_image_model", "gemini_tts_model", "veo_model"]:
             new[k] = st.text_input(k, cfg[k])
         new["video_seconds"] = st.selectbox("대사 영상 길이(초)", [4, 6, 8], index=[4, 6, 8].index(int(cfg["video_seconds"])))
+    new["brighten"] = st.slider("☀️ 화면 밝게 (완성 영상에서 그림·영상을 환하게 보정, 0 = 보정 안 함)", 0, 10,
+                                int(cfg.get("brighten", 5)))
     new["image_size"] = st.radio("그림 해상도 (자동 그림)", ["1K", "2K"], horizontal=True,
                                  index=["1K", "2K"].index(cfg.get("image_size", "2K")) if cfg.get("image_size", "2K") in ("1K", "2K") else 1,
                                  help="1K = 비용 절약(롱폼 추천), 2K = 더 선명(쇼츠 썸네일용)")

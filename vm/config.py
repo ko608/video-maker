@@ -35,7 +35,8 @@ DEFAULTS = {
     "subtitle_size": 76,
     "subtitle_y": 0.55,     # 자막 높이 (0=맨 위, 1=맨 아래). 쇼츠는 화면 중간쯤
     "video_seconds": 4,
-    "image_size": "2K",     # 그림 해상도 (1K/2K/4K) — 높을수록 선명, 비용 조금 더     # Veo 대사 영상 길이 (4/6/8)
+    "image_size": "2K",
+    "brighten": 5,          # 완성 영상 밝기 보정 (0~10)
 }
 
 def load():
