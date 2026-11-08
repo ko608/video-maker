@@ -308,6 +308,20 @@ def script_from_text(cfg, channel, title, text):
     return data
 
 
+def add_shots(cfg, data):
+    """이미 만든 대본의 그림 컷마다 '추가 화면 2개'(나레이션 가운데·끝부분에 맞는 장면)를 써 줌"""
+    items = [{"no": c["no"], "narration": c.get("narration", ""), "visual": c.get("visual", "")}
+             for c in data.get("cuts", []) if c.get("kind") == "image"]
+    prompt = f"""아래 영상 대본의 그림 컷마다, 나레이션을 3등분했을 때 가운데·끝부분 내용에 딱 맞는 화면 묘사 2개를 영어로 써 주세요.
+첫 화면(visual)은 이미 있으니 그 다음 두 화면만. 엉뚱한 장면 금지 — 나레이션이 말하는 그 사람의 반응 얼굴, 또는 그 순간의 음식·물건·자리.
+얼굴은 아주 가깝게(눈동자까지), 멀리서 찍은 장면 금지, 한 장에 한 장면.
+등장인물: {data.get('characters','')}
+컷 목록: {json.dumps(items, ensure_ascii=False)}
+JSON 하나만 출력: {{"컷번호": ["가운데 화면", "끝 화면"], ...}}"""
+    out = _json_from(_claude(cfg, prompt, max_tokens=4000))
+    return {str(k): v for k, v in out.items() if isinstance(v, list)}
+
+
 # ---------------- 2-1. 한 단어 → 주제 후보 ----------------
 def suggest_topics(cfg, channel, keyword):
     prompt = f"""당신은 조회수가 잘 나오는 한국 유튜브 스토리 작가입니다.

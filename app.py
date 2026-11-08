@@ -402,6 +402,22 @@ if page == "② 재료 만들기":
         st.divider()
 
         # ---- 플로우(무료) 한 번에: 전체 문구 + 한꺼번에 올리기 ----
+        no_shots = [int(c["no"]) for c in data["cuts"] if c["kind"] == "image" and not c.get("shots")]
+        if no_shots:
+            st.info(f"그림 컷 {no_shots} 은 화면이 1장뿐이라 오래 멈춰 보여요. 아래 버튼을 누르면 "
+                    "대본은 그대로 두고 컷마다 '추가 화면 2개'(나레이션 가운데·끝부분에 맞는 장면)를 써 넣어요.")
+            if st.button("🪄 그림 컷마다 추가 화면 2개 만들기 (대본 그대로, 몇 원)", type="primary"):
+                try:
+                    with st.spinner("추가 화면 쓰는 중…"):
+                        shots = ai.add_shots(cfg, data)
+                    for c in data["cuts"]:
+                        if str(c["no"]) in shots and c["kind"] == "image":
+                            c["shots"] = [soften(x) for x in shots[str(c["no"])]][:2]
+                    save_script(p, data)
+                    st.success("추가 화면을 넣었어요. 위 '그림 전체 문구'에 2-2, 2-3번이 생겼어요.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"오류: {e}")
         with st.expander("🗑 여러 컷 재료 한꺼번에 지우기"):
             have = [int(c["no"]) for c in data["cuts"]
                     if cut_file(p, int(c["no"])) or (p / "재료" / f"{int(c['no']):02d}_첫장면.png").exists()]
