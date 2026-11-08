@@ -67,6 +67,9 @@ def _with_retry(fn, models):
                 last = e
                 msg = str(e)
                 errs[m] = msg[:160]
+                if "402" in msg or "prepayment credits are depleted" in msg:
+                    raise RuntimeError("구글 충전금(선불 크레딧)을 다 썼어요. ai.studio/projects 에서 충전해 주세요. "
+                                       "충전 전에는 그림은 플로우에서 만들어 올리면 돼요(무료).")
                 if "exceeded your current quota" in msg or "billing" in msg:
                     if "limit: 0" in msg or "free_tier" in msg.lower():
                         raise RuntimeError("구글 무료 한도로는 이 기능(그림·목소리)을 쓸 수 없어요. AI Studio에서 결제(Billing)를 켜거나, 플로우에서 만들어 올려 주세요.")
