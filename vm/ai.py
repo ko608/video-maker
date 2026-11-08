@@ -297,8 +297,7 @@ def script_from_text(cfg, channel, title, text):
     data["format"] = fmt
     from .soften import soften
     for c in data.get("cuts", []):
-        c["line"] = soften(c.get("line", ""))
-        c["visual"] = soften(c.get("visual", ""))
+        c["visual"] = soften(c.get("visual", ""))   # 대사는 대표님 글 그대로 (플로우 문구에서만 순화됨)
         c["shots"] = [soften(x) for x in (c.get("shots") or [])][:2]
     return data
 
