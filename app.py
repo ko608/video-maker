@@ -648,6 +648,13 @@ if page == "③ 완성 영상":
         musics = [None] + sorted([m for m in config.MUSIC.iterdir() if m.suffix.lower() in (".mp3", ".wav", ".m4a")])
         music = st.selectbox("배경음악 (music 폴더의 곡)", musics, format_func=lambda m: "없음" if m is None else m.name)
         own_voice = st.checkbox("나레이션을 내가 녹음/다른 곳에서 만든 파일로 쓰기 (재료 폴더에 02_나레이션.mp3 처럼)")
+        auto_thumb = st.checkbox("썸네일 전용 그림을 구글로 자동으로 만들기 (약 100원 — 끄면 플로우에서 만든 그림이나 장면 그림으로 무료)",
+                                 value=False)
+        n_voice = sum(1 for c in data["cuts"] if c["kind"] == "image" and c.get("narration")
+                      and not (p / "work" / f"v_{cfg.get('tts_voice','Kore')}_{int(c['no']):02d}.wav").exists())
+        st.caption(f"💰 이번에 드는 비용: 나레이션 목소리 {n_voice}개 (약 {n_voice * 5}~{n_voice * 15}원)"
+                   + (" + 썸네일 그림 약 100원" if auto_thumb and not (p / "재료" / "썸네일전용.png").exists() else "")
+                   + " — 이미 만든 목소리는 다시 만들지 않아요. 영상 편집 자체는 0원.")
         if st.button("🎬 영상 만들기", type="primary", disabled=bool(missing), width="stretch"):
             log = Log()
             try:
@@ -704,7 +711,7 @@ if page == "③ 완성 영상":
                     if rows:
                         rows[0] = "0:00 " + rows[0].split(" ", 1)[1]
                         chapters_txt = "\n\n[챕터 — 설명란에 그대로 붙이세요]\n" + "\n".join(rows)
-                if not (p / "재료" / "썸네일전용.png").exists():
+                if auto_thumb and not (p / "재료" / "썸네일전용.png").exists():
                     try:
                         log("썸네일 전용 그림(주인공 얼굴 크게) 만드는 중…")
                         make_thumb_image(p, data, fmt)
