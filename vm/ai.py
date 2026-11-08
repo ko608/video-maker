@@ -258,6 +258,51 @@ def write_script(cfg, channel, analysis="", topic=""):
     return data
 
 
+# ---------------- 2-0. 대표님이 쓴 대본 그대로 → 컷 나누기 ----------------
+def script_from_text(cfg, channel, title, text):
+    fmt = channel.get("format", "shorts")
+    prompt = f"""아래는 대표님이 직접 쓴 유튜브 영상 대본입니다. 글(대사·나레이션)은 한 글자도 바꾸지 말고 그대로 쓰면서,
+영상 자판기용 컷으로 나눠 주세요. 대사가 길면 컷을 여러 개로 나눠도 되지만 내용은 그대로 둡니다.
+
+[채널] {channel['name']}  (형식: {'가로 롱폼' if fmt == 'longform' else '세로 쇼츠'})
+[화면 규칙]
+{chr(10).join('- ' + r for r in channel['rules'] if '컷' in r or '화면' in r or 'visual' in r or '클로즈업' in r)}
+- 대사 컷(kind "video") = 말하는 사람 얼굴 아주 가까운 클로즈업(눈동자까지). line은 4초 안에 말할 길이(길면 컷을 나눔).
+- 나레이션 컷(kind "image") = 나레이션 내용에 맞는 화면. 나레이션이 12초보다 길면 컷을 나눈다. visual(앞부분)+shots 2개(가운데·끝부분).
+- 대사·장면 묘사에는 돈·병원·내놔 같은 격한 말 대신 부드러운 말 (나레이션 글은 그대로).
+
+[제목] {title or '(없음 — 대본에 맞게 3개 만들어 주세요)'}
+[대본]
+{text}
+
+아래 JSON 하나만 출력하세요.
+{{"title_options": ["제목이 있으면 그 제목을 첫 번째로, 나머지 2개는 비슷한 후보"],
+ "description": "유튜브 설명 3~5줄 (줄바꿈은 \\n)", "tags": "쉼표 구분 태그 15개 안팎", "pinned_comment": "고정 댓글 한 줄",
+ "thumbnail": ["윗줄 10자 이내", "핵심 8자 이내", ""], "music_mood": "배경음악 분위기",
+ "characters": "등장인물 외모 설명(영어, 깔끔하게)",
+ "cuts": [
+  {{"no": 1, "kind": "video", "line": "대본의 대사 그대로", "speaker": "누가 누구에게", "speaker_en": "English: the speaker + look", "narration": "", "visual": "영어 장면"}},
+  {{"no": 2, "kind": "image", "line": "", "speaker": "", "narration": "대본의 나레이션 그대로", "visual": "영어 장면", "shots": ["영어", "영어"]}}
+ ]}}"""
+    data = _json_from(_claude(cfg, prompt, max_tokens=min(64000, 4000 + len(text) * 6)))
+    for i, c in enumerate(data.get("cuts", []), 1):
+        c["no"] = i
+        c.setdefault("line", ""); c.setdefault("narration", ""); c.setdefault("speaker", "")
+    up = channel.get("upload", {})
+    if up.get("description_tail") and up["description_tail"] not in data.get("description", ""):
+        data["description"] = data.get("description", "").rstrip() + "\n" + up["description_tail"]
+    if up.get("base_tags"):
+        have = [t.strip() for t in data.get("tags", "").split(",") if t.strip()]
+        data["tags"] = ",".join(have + [t for t in up["base_tags"].split(",") if t not in have])
+    data["format"] = fmt
+    from .soften import soften
+    for c in data.get("cuts", []):
+        c["line"] = soften(c.get("line", ""))
+        c["visual"] = soften(c.get("visual", ""))
+        c["shots"] = [soften(x) for x in (c.get("shots") or [])][:2]
+    return data
+
+
 # ---------------- 2-1. 한 단어 → 주제 후보 ----------------
 def suggest_topics(cfg, channel, keyword):
     prompt = f"""당신은 조회수가 잘 나오는 한국 유튜브 스토리 작가입니다.

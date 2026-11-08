@@ -238,6 +238,21 @@ if page == "① 분석·대본":
         except Exception as e:
             st.error(f"오류: {e}")
 
+    with st.expander("📝 내 제목·대본 통째로 넣기 (AI가 글은 그대로 두고 컷만 나눠 줘요)"):
+        my_title = st.text_input("제목 (있으면)", key="my_title")
+        my_text = st.text_area("대본 전체 붙여 넣기 — 대사·나레이션 그대로 쓰여요",
+                               height=260, key="my_text",
+                               placeholder="예)\n아들: 엄마 생신인데 또 엄마가 계산해?\n(나레이션) 그날 저녁, 식당 안은 조용해졌습니다…")
+        st.caption("AI는 글을 고치지 않고, 대사는 대사 영상 컷으로, 나레이션은 그림 컷으로 나누고 장면 묘사·썸네일 문구·태그만 붙여요.")
+        if st.button("✂️ 이 대본으로 컷 나누기", type="primary", disabled=not my_text.strip()):
+            try:
+                with st.spinner("컷 나누는 중… (1분 안팎)"):
+                    st.session_state["draft"] = ai.script_from_text(cfg, ch, my_title, my_text)
+                    st.session_state["draft_channel"] = ch["id"]
+                st.success("완료! 아래에서 확인하고 고친 뒤 저장하세요.")
+            except Exception as e:
+                st.error(f"오류: {e}")
+
     if st.session_state.get("analysis"):
         with st.expander("📊 영상 분석 보고서 (장점·단점·적용점)", expanded=False):
             st.markdown(st.session_state["analysis"])
