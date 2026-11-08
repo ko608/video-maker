@@ -145,7 +145,7 @@ SCRIPT_PROMPT = """당신은 조회수가 잘 나오는 한국 유튜브 스토�
  "music_mood": "배경음악 분위기 한 줄",
  "characters": "등장인물 외모 설명(영어, 모든 장면에서 같은 사람으로 보이게): 나이·머리·옷",
  "cuts": [
-  {{"no": 1, "kind": "video", "line": "대사(따옴표 없이, 띄어쓰기 포함 15~20자 — 4초를 꽉 채우는 길이)", "speaker": "누가 누구에게", "speaker_en": "English: ONLY the person who speaks + look, e.g. the daughter-in-law (woman in her 30s, ponytail, beige cardigan)", "narration": "", "visual": "영어 장면 묘사: 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채움, 눈동자까지 또렷), 상대는 뒤에 작고 흐리게"}},
+  {{"no": 1, "kind": "video", "line": "대사(따옴표 없이, 띄어쓰기 포함 15~50자 — 15~20자=4초, ~30자=6초, ~40자=8초, ~50자=10초 영상)", "speaker": "누가 누구에게", "speaker_en": "English: ONLY the person who speaks + look, e.g. the daughter-in-law (woman in her 30s, ponytail, beige cardigan)", "narration": "", "visual": "영어 장면 묘사: 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채움, 눈동자까지 또렷), 상대는 뒤에 작고 흐리게"}},
   {{"no": 2, "kind": "image", "line": "", "speaker": "", "narration": "나레이션 90~130자", "visual": "영어: 나레이션 앞부분 내용에 맞는 화면", "shots": ["영어: 나레이션 가운데 내용에 맞는 화면(그 사람의 반응 얼굴 또는 그 순간의 음식·물건)", "영어: 나레이션 끝부분 내용에 맞는 화면"]}}
  ]
 }}
@@ -187,12 +187,12 @@ LONG_SCRIPT_PROMPT = """당신은 시청자가 20~30분 동안 한 번도 넘기
  "music_mood": "배경음악 분위기 한 줄",
  "characters": "등장인물 외모 설명(영어, 모든 장면에서 같은 사람으로 보이게): 이름·나이·머리·옷 (깔끔하고 단정하게)",
  "opening": [
-  {{"line": "첫 장면 대사(15~20자, 갈등이 바로 터지는 말)", "speaker": "누가 누구에게", "speaker_en": "English: ONLY the person who speaks + look", "visual": "영어 드라마 장면: 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채움, 눈동자까지 또렷)"}}
+  {{"line": "첫 장면 대사(15~30자, 갈등이 바로 터지는 말)", "speaker": "누가 누구에게", "speaker_en": "English: ONLY the person who speaks + look", "visual": "영어 드라마 장면: 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채움, 눈동자까지 또렷)"}}
  ],
  "chapters": [
   {{"title": "장 제목(짧게)", "cuts": [
     {{"kind": "image", "narration": "나레이션 150~230자. 인물 대사를 “둥근 따옴표”로 2~4번 넣어 드라마처럼(곧은 따옴표는 절대 쓰지 말 것)", "visual": "영어: 나레이션 앞부분 내용에 맞는 드라마 화면", "shots": ["영어: 나레이션 가운데에 맞는 화면(반응 얼굴·분위기)", "영어: 나레이션 끝부분에 맞는 화면"]}},
-    {{"kind": "video", "line": "이 장에서 가장 센 순간의 대사(15~20자)", "speaker": "누가 누구에게", "speaker_en": "English: ONLY the person who speaks + look", "visual": "영어 드라마 장면: 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채움, 눈동자까지 또렷)"}}
+    {{"kind": "video", "line": "이 장에서 가장 센 순간의 대사(15~40자)", "speaker": "누가 누구에게", "speaker_en": "English: ONLY the person who speaks + look", "visual": "영어 드라마 장면: 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채움, 눈동자까지 또렷)"}}
   ]}}
  ]
 }}
@@ -258,6 +258,12 @@ def write_script(cfg, channel, analysis="", topic=""):
     return data
 
 
+def video_seconds_for(line):
+    """대사 글자 수 → 영상 길이 (15~20자 4초, ~30자 6초, ~40자 8초, 그 이상 10초)"""
+    n = len((line or "").strip())
+    return 4 if n <= 20 else 6 if n <= 30 else 8 if n <= 40 else 10
+
+
 # ---------------- 2-0. 대표님이 쓴 대본 그대로 → 컷 나누기 ----------------
 def script_from_text(cfg, channel, title, text):
     fmt = channel.get("format", "shorts")
@@ -267,7 +273,7 @@ def script_from_text(cfg, channel, title, text):
 [채널] {channel['name']}  (형식: {'가로 롱폼' if fmt == 'longform' else '세로 쇼츠'})
 [화면 규칙]
 {chr(10).join('- ' + r for r in channel['rules'] if '컷' in r or '화면' in r or 'visual' in r or '클로즈업' in r)}
-- 대사 컷(kind "video") = 말하는 사람 얼굴 아주 가까운 클로즈업(눈동자까지). line은 4초에 맞게 15~20자(길면 컷을 나눔).
+- 대사 컷(kind "video") = 말하는 사람 얼굴 아주 가까운 클로즈업(눈동자까지). line은 대본 그대로 — 영상 길이는 글자 수에 맞춰 4·6·8·10초(50자 넘으면 컷을 나눔).
 - 나레이션 컷(kind "image") = 나레이션 내용에 맞는 화면. 나레이션이 12초보다 길면 컷을 나눈다. visual(앞부분)+shots 2개(가운데·끝부분).
 - 대사·장면 묘사에는 돈·병원·내놔 같은 격한 말 대신 부드러운 말 (나레이션 글은 그대로).
 

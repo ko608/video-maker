@@ -190,7 +190,7 @@ if page == "① 분석·대본":
             ch["cuts"] = n
             twist = round(n * 2 / 3)
             ch["rules"] = list(ch["rules"]) + [
-                f"[이번 길이 우선 적용] 전체 {n}컷: 홀수 컷(1·3·5…)은 대사 영상(4초), 짝수 컷은 이미지 + 나레이션(90~130자). "
+                f"[이번 길이 우선 적용] 전체 {n}컷: 홀수 컷(1·3·5…)은 대사 영상(4~10초, 대사 길이에 맞춤), 짝수 컷은 이미지 + 나레이션(90~130자). "
                 f"위 규칙의 '6컷'·'4컷 반전'은 무시하고, 큰 반전은 {twist}컷 무렵, 작은 반전·의문은 3컷마다 넣는다. "
                 "마지막 컷 나레이션 마무리 문장 규칙은 그대로 지킨다."]
     url = st.text_input("잘 되는 영상 유튜브 링크 (없으면 비워 두고 아래 주제만 써도 됩니다)")
@@ -380,7 +380,7 @@ if page == "② 재료 만들기":
                                    "Do not add any other lines. "
                                    f"Scene {no}: {c['visual']}. Characters: {data.get('characters','')}. {style}. "
                                    "Tight close-up on the speaker's face (face fills most of the frame, eyes sharp). Natural lip sync, no background music, no subtitles, no text on screen.")
-                        ai.make_video(cfg, soften(vprompt), p / "재료" / f"{no:02d}.mp4", first_frame=still, aspect=aspect, log=log)
+                        ai.make_video(dict(cfg, video_seconds=ai.video_seconds_for(c.get("line"))), soften(vprompt), p / "재료" / f"{no:02d}.mp4", first_frame=still, aspect=aspect, log=log)
                 except Exception as e:
                     log(f"컷 {no} 실패: {e}")
             log("끝! 아래에서 확인하세요.")
@@ -435,13 +435,13 @@ if page == "② 재료 만들기":
                   f"자연스러운 피부). 모든 장면에서 같은 인물: {data.get('characters','')}")
         lines_all = [f"아래 그림들을 순서대로 만들어 줘. 첨부한 인물 기준 그림과 똑같은 사람(얼굴·머리·옷)으로 — 기준 그림의 왼쪽부터 등장인물 설명 순서대로. 여러 명이 나오는 장면도 각자 기준 그림의 그 사람으로. 공통: {common}", ""]
         vid_lines = ["아래 영상들을 차례로 만들어 줘. 각 영상은 위에서 만든 같은 번호의 '시작 그림'에서 이어지게. "
-                     f"{ratio_ko}, 4초, 말하는 사람 얼굴을 아주 가깝게(눈동자까지), 다른 사람은 말하지 않음, 밝게, 자막 없이.", ""]
+                     f"{ratio_ko}, 영상 길이는 번호마다 적힌 초, 말하는 사람 얼굴을 아주 가깝게(눈동자까지), 다른 사람은 말하지 않음, 밝게, 자막 없이.", ""]
         for c in data["cuts"]:
             if c["kind"] == "video":
                 # 대사 컷의 '시작 그림'도 그림들과 함께 한 번에
                 lines_all.append(f"{c['no']}번 [대사 영상 시작 그림] {c['visual']} — 말할 사람: "
                                  f"{c.get('speaker_en') or c.get('speaker','')}, 얼굴이 화면을 거의 채우게, 말하기 직전 표정")
-                vid_lines.append(f"{c['no']}번 [영상] {c.get('speaker','')} 말함: \"{c['line']}\" / 장면: {c['visual']}")
+                vid_lines.append(f"{c['no']}번 [영상 {ai.video_seconds_for(c.get('line'))}초] {c.get('speaker','')} 말함: \"{c['line']}\" / 장면: {c['visual']}")
             else:
                 lines_all.append(f"{c['no']}번 [이미지] {c['visual']}")
                 for k_, v_ in enumerate(c.get("shots") or [], 2):
@@ -542,7 +542,7 @@ if page == "② 재료 만들기":
             l.write(c.get("line") or c.get("narration", ""))
             if c["kind"] == "video":
                 # 플로우 영상은 짧게 — 시작 그림이 인물·배경을 이미 담고 있음 (긴 문구는 거절되기 쉬움)
-                flow = (f"첨부한 시작 그림에서 이어지는 {ratio_ko} 4초 영상. {c['visual']}\n"
+                flow = (f"첨부한 시작 그림에서 이어지는 {ratio_ko} {ai.video_seconds_for(c.get('line'))}초 영상. {c['visual']}\n"
                         f"{c.get('speaker','')} 말함: \"{c['line']}\"\n"
                         "다른 사람은 말하지 않음. 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷), 상대는 뒤에 흐리게. 밝고 환한 분위기, 자막 없이.")
             else:
