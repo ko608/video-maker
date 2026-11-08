@@ -322,6 +322,17 @@ JSON 하나만 출력: {{"컷번호": ["가운데 화면", "끝 화면"], ...}}"
     return {str(k): v for k, v in out.items() if isinstance(v, list)}
 
 
+def pick_key_scenes(cfg, data):
+    """썸네일에 쓸 핵심 장면 2곳(컷 번호)을 고름 — 가장 감정이 큰 순간·반전 순간"""
+    items = [{"no": c["no"], "text": (c.get("line") or c.get("narration", ""))[:120], "visual": c.get("visual", "")[:150]}
+             for c in data.get("cuts", [])]
+    prompt = ("유튜브 썸네일로 쓸 '핵심 장면' 2곳을 고르세요: ① 가장 큰 갈등·충격 순간 ② 반전이나 눈물 나는 순간. "
+              "얼굴 표정이 크게 보이는 장면을 우선. 컷 목록: " + json.dumps(items, ensure_ascii=False) +
+              '\nJSON 하나만: {"scenes": [컷번호, 컷번호]}')
+    out = _json_from(_claude(cfg, prompt, max_tokens=300))
+    return [int(x) for x in out.get("scenes", [])][:2]
+
+
 def match_images(cfg, slots, images):
     """올린 그림들을 보고 어느 자리(컷)에 맞는지 AI가 짝지어 줌.
     slots: {"2": "장면 설명", "2-2": "...", ...}, images: [bytes, ...] → ["2-2", "4", ...] (같은 길이)"""

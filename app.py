@@ -129,26 +129,45 @@ def extra_files(p, no):
     return out
 
 
-def make_thumbs(p, data, fmt):
-    """썸네일 A·B 만들기 — 재료 그림 중 선명한 장면 2개 사용"""
-    from PIL import Image as _I
-    assemble.set_format(fmt)
-    pics = sorted([x for x in (p / "재료").iterdir() if x.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")
+def scene_pics(p):
+    """썸네일 후보 그림 (기준 그림 제외) — 컷 그림·추가 화면·첫 장면·썸네일 전용"""
+    return sorted([x for x in (p / "재료").iterdir() if x.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")
                    and "기준" not in x.name], key=lambda x: x.name)
-    def _px(x):
-        try:
-            w_, h_ = _I.open(x).size; return w_ * h_
-        except Exception:
-            return 0
-    special = [x for x in pics if x.stem == "썸네일전용"]
-    scenes = [x for x in pics if x.stem != "썸네일전용"]
-    big = max(scenes, key=_px) if scenes else None
-    mid = scenes[len(scenes) // 2] if len(scenes) > 1 else big
-    if mid == big and scenes:
-        mid = scenes[-1]
-    if special:                 # 썸네일 전용 그림(주인공 얼굴 크게)이 있으면 A·B 모두 그걸로
-        return assemble.thumbnails(p, data.get("thumbnail", []), [special[0], special[0]], cfg)
-    return assemble.thumbnails(p, data.get("thumbnail", []), [big, mid], cfg)
+
+
+def make_thumbs(p, data, fmt, picks=None):
+    """썸네일 A·B — 둘 다 글씨는 아래, 서로 다른 핵심 장면 2곳"""
+    assemble.set_format(fmt)
+    pics = scene_pics(p)
+    if picks:
+        chosen = [x for x in picks if x]
+    else:
+        chosen = [Path(x) for x in data.get("thumb_scenes", []) if Path(x).exists()]
+        if len(chosen) < 2:
+            chosen = []
+            try:     # AI가 대본을 보고 핵심 장면 2곳(컷)을 고름 — 몇 원
+                for no in ai.pick_key_scenes(cfg, data):
+                    f_ = cut_file(p, no)
+                    if f_ is None or f_.suffix.lower() in (".mp4", ".mov"):
+                        st_ = list((p / "재료").glob(f"{no:02d}_첫장면.*"))
+                        f_ = st_[0] if st_ else None
+                    if f_ is not None:
+                        chosen.append(f_)
+            except Exception:
+                pass
+        special = [x for x in pics if x.stem == "썸네일전용"]
+        if special and special[0] not in chosen:
+            chosen = special + chosen
+        scenes = [x for x in pics if x.stem != "썸네일전용"]
+        for x in [scenes[len(scenes) * 2 // 3] if scenes else None, scenes[0] if scenes else None]:
+            if len(chosen) >= 2:
+                break
+            if x is not None and x not in chosen:
+                chosen.append(x)
+    chosen = (chosen + chosen[:1])[:2] if chosen else [None, None]
+    data["thumb_scenes"] = [str(x) for x in chosen if x]
+    save_script(p, data)
+    return assemble.thumbnails(p, data.get("thumbnail", []), chosen, cfg)
 
 
 def thumb_prompt(data, fmt, style):
@@ -690,16 +709,28 @@ if page == "③ 완성 영상":
                 show_small(u2, sp_, caption="썸네일 전용 그림")
                 if u2.button("🗑 이 그림 빼기 (장면 그림으로 돌아가기)", key="del_thimg"):
                     sp_.unlink(); make_thumbs(p, data, fmt); st.rerun()
-        with st.expander("🖼 썸네일 문구 바꾸기 (영상은 그대로, 썸네일만 다시 만들어요 — 0원)"):
+        with st.expander("🖼 썸네일 문구·장면 바꾸기 (영상은 그대로, 썸네일만 다시 만들어요 — 0원)", expanded=True):
             tl = (list(data.get("thumbnail", [])) + ["", ""])[:2]
             t1 = st.text_input("윗줄 (흰 글씨, 10자 안팎)", tl[0], key=f"th1_{p.name}")
             t2 = st.text_input("아랫줄 (노란 큰 글씨, 8자 안팎)", tl[1], key=f"th2_{p.name}")
-            if st.button("🖼 이 문구로 썸네일 다시 만들기", key="remake_th"):
+            pics_ = scene_pics(p)
+            names_ = [x.name for x in pics_]
+            cur_ = [Path(x).name for x in data.get("thumb_scenes", [])]
+            ca, cb = st.columns(2)
+            ia = ca.selectbox("썸네일 A 장면", names_, index=names_.index(cur_[0]) if cur_ and cur_[0] in names_ else 0,
+                              key="tha") if names_ else None
+            ib = cb.selectbox("썸네일 B 장면", names_, index=names_.index(cur_[1]) if len(cur_) > 1 and cur_[1] in names_ else min(1, len(names_) - 1),
+                              key="thb") if names_ else None
+            if ia:
+                show_small(ca, p / "재료" / ia)
+            if ib:
+                show_small(cb, p / "재료" / ib)
+            if st.button("🖼 이 문구·장면으로 썸네일 다시 만들기", key="remake_th"):
                 data["thumbnail"] = [t1.strip(), t2.strip(), ""]
                 save_script(p, data)
                 try:
                     with st.spinner("썸네일 만드는 중…"):
-                        make_thumbs(p, data, fmt)
+                        make_thumbs(p, data, fmt, picks=[p / "재료" / ia, p / "재료" / ib] if ia and ib else None)
                     st.success("썸네일 A·B를 새로 만들었어요. 아래에서 확인하세요.")
                 except Exception as e:
                     st.error(f"오류: {e}")

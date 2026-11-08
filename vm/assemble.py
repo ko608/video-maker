@@ -419,12 +419,13 @@ def thumbnails(project: Path, lines, photos, cfg):
     import shutil
     photos = [x for x in (photos or []) if x] or [None]
     pa, pb = photos[0], (photos[1] if len(photos) > 1 else photos[0])
+    # A·B 모두 '글씨 아래' 모양, 서로 다른 핵심 장면 2곳
     if W > H:
         a = thumbnail_wide(project, lines, pa, cfg, "썸네일_A.jpg")
-        b = thumbnail_panel(project, lines, pb, cfg, "썸네일_B.jpg")
+        b = thumbnail_wide(project, lines, pb, cfg, "썸네일_B.jpg")
     else:
-        a = thumbnail_tall_low(project, lines, pa, cfg, "썸네일_A.jpg")          # 얼굴 아래 글씨
-        b0 = thumbnail(project, lines, pb, cfg); b = project / "썸네일_B.jpg"; shutil.copy(b0, b)   # 위쪽 글씨 + 다른 장면
+        a = thumbnail_tall_low(project, lines, pa, cfg, "썸네일_A.jpg")
+        b = thumbnail_tall_low(project, lines, pb, cfg, "썸네일_B.jpg")
     shutil.copy(a, project / "썸네일.jpg")
     return a, b
 
