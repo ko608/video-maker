@@ -434,23 +434,33 @@ if page == "② 재료 만들기":
         common = (f"{ratio_ko}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로(옛날 초가 주막이면 허름한 초가 그대로 — 더 부유하거나 현대식으로 바꾸지 말 것), 정지 그림은 음식 클로즈업이나 인물 얼굴 클로즈업(멀리서 형체만 보이는 장면 금지), 인물은 옛날 이야기라도 단정하고 깔끔하게, 얼굴은 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷하게 보여 감정이 읽히게), 두 사람이면 한 사람 얼굴을 크게 앞에·상대는 뒤에 작고 흐리게, 주변은 흐리고 단순하게(지저분한 물건 없이), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, "
                   f"자연스러운 피부). 모든 장면에서 같은 인물: {data.get('characters','')}")
         lines_all = [f"아래 그림들을 순서대로 만들어 줘. 첨부한 인물 기준 그림과 똑같은 사람(얼굴·머리·옷)으로 — 기준 그림의 왼쪽부터 등장인물 설명 순서대로. 여러 명이 나오는 장면도 각자 기준 그림의 그 사람으로. 공통: {common}", ""]
+        vid_lines = ["아래 영상들을 차례로 만들어 줘. 각 영상은 위에서 만든 같은 번호의 '시작 그림'에서 이어지게. "
+                     f"{ratio_ko}, 4초, 말하는 사람 얼굴을 아주 가깝게(눈동자까지), 다른 사람은 말하지 않음, 밝게, 자막 없이.", ""]
         for c in data["cuts"]:
             if c["kind"] == "video":
-                continue   # 대사 영상은 컷마다 시작 그림을 넣고 아래 짧은 문구로 따로 만들기
+                # 대사 컷의 '시작 그림'도 그림들과 함께 한 번에
+                lines_all.append(f"{c['no']}번 [대사 영상 시작 그림] {c['visual']} — 말할 사람: "
+                                 f"{c.get('speaker_en') or c.get('speaker','')}, 얼굴이 화면을 거의 채우게, 말하기 직전 표정")
+                vid_lines.append(f"{c['no']}번 [영상] {c.get('speaker','')} 말함: \"{c['line']}\" / 장면: {c['visual']}")
             else:
                 lines_all.append(f"{c['no']}번 [이미지] {c['visual']}")
                 for k_, v_ in enumerate(c.get("shots") or [], 2):
                     lines_all.append(f"{c['no']}-{k_}번 [이미지] {v_}")
         lines_all = [soften(x) for x in lines_all]
-        st.text_area("① 그림 컷 문구 전체 복사 → 플로우 채팅창에 한 번에 (대사 영상은 아래 컷마다 짧은 문구로)",
+        st.text_area("① 그림 전체 문구 (대사 컷 시작 그림 포함) — 복사해서 플로우 채팅창에 한 번에",
                      "\n".join(lines_all), height=220, key="flow_all")
+        if len(vid_lines) > 2:
+            st.text_area("②-1 대사 영상 문구 한 번에 — ①의 그림이 다 나온 뒤, 같은 채팅창에 이어서 붙여 넣기",
+                         "\n".join(soften(x) for x in vid_lines), height=150, key="flow_vids")
         empty = [int(c["no"]) for c in data["cuts"] if not cut_file(p, int(c["no"]))]
         ups = st.file_uploader("② 플로우에서 받은 파일들을 한꺼번에 올리기 — 올린 뒤 그림을 보고 컷 번호만 골라 주세요",
                                type=["png", "jpg", "jpeg", "webp", "mp4", "mov"],
                                accept_multiple_files=True, key="bulk_up")
         if ups:
             def _save(u, no):
-                if isinstance(no, str) and "-" in no:      # 그림 컷의 2·3번째 화면
+                if isinstance(no, str) and no.endswith("-시작"):   # 대사 컷의 시작 그림
+                    stem = f"{int(no.split('-')[0]):02d}_첫장면"
+                elif isinstance(no, str) and "-" in no:      # 그림 컷의 2·3번째 화면
                     n_, sub_ = no.split("-")
                     stem = f"{int(n_):02d}_{EXTRA[int(sub_) - 2]}"
                 else:
@@ -465,9 +475,11 @@ if page == "② 재료 만들기":
                 vid_slots = [int(c["no"]) for c in data["cuts"] if c["kind"] == "video" and not cut_file(p, int(c["no"]))]
                 img_slots = []
                 for c in data["cuts"]:
-                    if c["kind"] != "image":
-                        continue
                     n_ = int(c["no"])
+                    if c["kind"] == "video":
+                        if not (p / "재료" / f"{n_:02d}_첫장면.png").exists() and not list((p / "재료").glob(f"{n_:02d}_첫장면.*")):
+                            img_slots.append(f"{n_}-시작")
+                        continue
                     if not cut_file(p, n_):
                         img_slots.append(n_)
                     have_x = [x.stem.split("_")[1] for x in extra_files(p, n_)]
@@ -493,6 +505,8 @@ if page == "② 재료 만들기":
                 all_nos.append(int(c["no"]))
                 if c["kind"] == "image":
                     all_nos += [f"{int(c['no'])}-2", f"{int(c['no'])}-3"]
+                else:
+                    all_nos.append(f"{int(c['no'])}-시작")
             plan = {}
             cols = st.columns(4)
             for k, u in enumerate(ups):
