@@ -100,10 +100,12 @@ def cut_file(p, no):
 
 
 ART_STYLES = {
-    "반실사 일러스트": ("Semi-realistic digital painting style (between a photo and an illustration): soft smooth shading, "
-                  "clean simplified backgrounds, warm gentle colors, smooth skin, polished and tidy, NOT a photograph; "
-                  "the person is crisp and sharp with clear outlines and good contrast, background evenly lit — no glow, no bloom, no haze, no blown-out window light",
-                  "반실사 디지털 그림체(사진과 그림의 중간, 부드러운 채색, 깔끔하고 단순한 배경, 매끈한 피부, 사진 같지 않게), 인물은 윤곽이 또렷하고 선명하게, 배경 빛 번짐·뿌연 느낌·과한 햇살 없이"),
+    "반실사 일러스트": ("Realistic semi-real style, about 75 percent realistic: real human facial structure and proportions, "
+                  "realistic eyes, nose and skin, like a high-end retouched portrait or a realistic 3D render — only the skin, light and background "
+                  "are softened and cleaned up. NOT anime, NOT cartoon, NOT webtoon, no big anime eyes, no outlines; "
+                  "the person is crisp and sharp with good contrast, background evenly lit — no glow, no bloom, no haze",
+                  "실사에 가까운 반실사(얼굴 생김새·눈·코·피부는 실제 사람처럼 사실적으로, 피부결·조명·배경만 깔끔하게 다듬은 고급 보정 사진 느낌), "
+                  "애니메이션·만화·웹툰 느낌 금지, 인물은 윤곽이 또렷하고 선명하게, 배경 빛 번짐·뿌연 느낌 없이"),
     "깔끔한 드라마 사진풍": ("Clean polished Korean TV drama still photo: smooth even skin, no grit, no film grain, tidy simple background",
                      "깔끔한 드라마 사진풍(매끈한 피부, 거친 질감·지저분한 배경 없이)"),
     "웹툰풍": ("Korean webtoon art style: clean line art, bright flat colors, expressive faces, simple backgrounds",
