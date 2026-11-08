@@ -434,24 +434,55 @@ if page == "② 재료 만들기":
                                type=["png", "jpg", "jpeg", "webp", "mp4", "mov"],
                                accept_multiple_files=True, key="bulk_up")
         if ups:
-            vid_cuts = [int(c["no"]) for c in data["cuts"] if c["kind"] == "video" and not cut_file(p, int(c["no"]))]
-            img_cuts = [int(c["no"]) for c in data["cuts"] if c["kind"] == "image" and not cut_file(p, int(c["no"]))]
+            def _save(u, no):
+                if isinstance(no, str) and "-" in no:      # 그림 컷의 2·3번째 화면
+                    n_, sub_ = no.split("-")
+                    stem = f"{int(n_):02d}_{EXTRA[int(sub_) - 2]}"
+                else:
+                    stem = f"{int(no):02d}"
+                for old in (p / "재료").glob(f"{stem}.*"):
+                    old.unlink()
+                (p / "재료" / f"{stem}{Path(u.name).suffix.lower()}").write_bytes(u.getbuffer())
+
+            sig = p.name + "|" + "|".join(f"{u.name}:{u.size}" for u in ups)
+            if st.session_state.get("_bulk_sig") != sig:
+                # 새로 올린 묶음 → 빈 자리에 순서대로 '바로' 넣기 (그림: 2 → 2-2 → 2-3 → 4 …, 영상: 1 → 3 …)
+                vid_slots = [int(c["no"]) for c in data["cuts"] if c["kind"] == "video" and not cut_file(p, int(c["no"]))]
+                img_slots = []
+                for c in data["cuts"]:
+                    if c["kind"] != "image":
+                        continue
+                    n_ = int(c["no"])
+                    if not cut_file(p, n_):
+                        img_slots.append(n_)
+                    have_x = [x.stem.split("_")[1] for x in extra_files(p, n_)]
+                    for k_, t_ in enumerate(EXTRA, 2):
+                        if t_ not in have_x:
+                            img_slots.append(f"{n_}-{k_}")
+                plan0, vi, ii = [], 0, 0
+                for u in ups:
+                    if Path(u.name).suffix.lower() in (".mp4", ".mov"):
+                        plan0.append(vid_slots[vi] if vi < len(vid_slots) else "넣지 않음"); vi += 1
+                    else:
+                        plan0.append(img_slots[ii] if ii < len(img_slots) else "넣지 않음"); ii += 1
+                for u, no in zip(ups, plan0):
+                    if no != "넣지 않음":
+                        _save(u, no)
+                st.session_state["_bulk_sig"] = sig
+                st.session_state["_bulk_plan"] = plan0
+                st.success(f"{sum(1 for x in plan0 if x != '넣지 않음')}개 파일을 빈 자리에 바로 넣었어요. "
+                           "순서가 틀린 게 있으면 아래에서 번호를 바꾸고 '다시 넣기'를 누르세요.")
+            plan0 = st.session_state.get("_bulk_plan", [])
             all_nos = ["넣지 않음"]
             for c in data["cuts"]:
                 all_nos.append(int(c["no"]))
                 if c["kind"] == "image":
                     all_nos += [f"{int(c['no'])}-2", f"{int(c['no'])}-3"]
-            st.caption("파일마다 들어갈 컷을 골라 주세요. (처음엔 빈 컷 순서대로 미리 골라 둠)")
-            plan, vi, ii = {}, 0, 0
+            plan = {}
             cols = st.columns(4)
             for k, u in enumerate(ups):
-                is_v = Path(u.name).suffix.lower() in (".mp4", ".mov")
-                if is_v:
-                    guess = vid_cuts[vi] if vi < len(vid_cuts) else "넣지 않음"; vi += 1
-                else:
-                    guess = img_cuts[ii] if ii < len(img_cuts) else "넣지 않음"; ii += 1
                 box = cols[k % 4]
-                if is_v:
+                if Path(u.name).suffix.lower() in (".mp4", ".mov"):
                     box.markdown(f"🎬 **영상**  \n{u.name[:18]}")
                 else:
                     try:
@@ -461,24 +492,15 @@ if page == "② 재료 만들기":
                         box.image(im, width="stretch")
                     except Exception:
                         box.write(u.name[:18])
-                plan[k] = box.selectbox("컷", all_nos, index=all_nos.index(guess), key=f"assign_{k}_{u.name}",
+                g = plan0[k] if k < len(plan0) and plan0[k] in all_nos else "넣지 않음"
+                plan[k] = box.selectbox("컷", all_nos, index=all_nos.index(g), key=f"assign_{k}_{u.name}",
                                         label_visibility="collapsed")
-            if st.button("📥 고른 컷에 넣기", type="primary"):
-                done = []
+            if st.button("📥 바꾼 번호로 다시 넣기"):
                 for k, u in enumerate(ups):
-                    no = plan[k]
-                    if no == "넣지 않음":
-                        continue
-                    if isinstance(no, str) and "-" in no:      # 그림 컷의 2·3번째 화면
-                        n_, sub_ = no.split("-")
-                        stem = f"{int(n_):02d}_{EXTRA[int(sub_) - 2]}"
-                    else:
-                        stem = f"{int(no):02d}"
-                    for old in (p / "재료").glob(f"{stem}.*"):
-                        old.unlink()
-                    (p / "재료" / f"{stem}{Path(u.name).suffix.lower()}").write_bytes(u.getbuffer())
-                    done.append(no)
-                st.success(f"컷 {done} 에 넣었어요.")
+                    if plan[k] != "넣지 않음":
+                        _save(u, plan[k])
+                st.session_state["_bulk_plan"] = [plan[k] for k in range(len(ups))]
+                st.success("바꾼 번호로 다시 넣었어요.")
         st.divider()
         for c in data["cuts"]:
             no = int(c["no"])
