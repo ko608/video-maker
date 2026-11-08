@@ -323,9 +323,13 @@ if page == "② 재료 만들기":
                     ai.make_image(cfg, f"Character reference sheet: all main characters standing side by side, left to right in the order listed, full body, "
                                        f"facing camera, plain bright background, clear faces. {data.get('characters','')}. "
                                        "Ordinary everyday Korean people with average, natural faces. "
-                                       "Bright, airy, high-key lighting, no text.", ref, aspect=aspect)
+                                       "Bright, airy, high-key lighting, no text. ART STYLE (must follow): " + art_style(cfg)[0] + ".",
+                                  ref, aspect=aspect)
             except Exception as e:
                 st.error(f"오류: {e}")
+        rc1.text_area("플로우에서 기준 그림 만들 문구 (무료)",
+                      f"{art_style(cfg)[1]}. 등장인물 전원이 왼쪽부터 순서대로 나란히 서 있는 전신 그림, 정면, 밝고 단순한 배경, "
+                      f"얼굴이 또렷하게, 글자 없이. 등장인물: {data.get('characters','')}", height=100, key="ref_flow")
         upr = rc1.file_uploader("또는 플로우에서 만든 인물 그림 올리기", type=["png", "jpg", "jpeg", "webp"], key="ref_up")
         if new_upload(f"{p.name}_ref", upr):
             ref.write_bytes(upr.getbuffer())
