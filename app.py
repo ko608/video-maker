@@ -456,7 +456,7 @@ if page == "② 재료 만들기":
                     if not cut_file(p, n_):
                         img_slots.append(n_)
                     have_x = [x.stem.split("_")[1] for x in extra_files(p, n_)]
-                    for k_, t_ in enumerate(EXTRA, 2):
+                    for k_, t_ in list(enumerate(EXTRA, 2))[:len(c.get("shots") or [])]:   # 대본에 추가 화면이 있을 때만
                         if t_ not in have_x:
                             img_slots.append(f"{n_}-{k_}")
                 plan0, vi, ii = [], 0, 0
