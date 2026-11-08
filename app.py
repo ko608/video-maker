@@ -467,7 +467,8 @@ if page == "② 재료 만들기":
                     stem = f"{int(no):02d}"
                 for old in (p / "재료").glob(f"{stem}.*"):
                     old.unlink()
-                (p / "재료" / f"{stem}{Path(u.name).suffix.lower()}").write_bytes(u.getbuffer())
+                ext = ".png" if stem.endswith("_첫장면") else Path(u.name).suffix.lower()
+                (p / "재료" / f"{stem}{ext}").write_bytes(u.getbuffer())
 
             sig = p.name + "|" + "|".join(f"{u.name}:{u.size}" for u in ups)
             if st.session_state.get("_bulk_sig") != sig:
