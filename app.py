@@ -523,6 +523,26 @@ if page == "② 재료 만들기":
                         plan0.append(vid_slots[vi] if vi < len(vid_slots) else "넣지 않음"); vi += 1
                     else:
                         plan0.append(img_slots[ii] if ii < len(img_slots) else "넣지 않음"); ii += 1
+                # 그림은 AI가 직접 보고 장면 설명과 맞는 자리에 넣기 (플로우 파일 순서가 뒤죽박죽이어도 OK)
+                pic_idx = [k for k, u in enumerate(ups) if Path(u.name).suffix.lower() not in (".mp4", ".mov")]
+                if pic_idx and img_slots and cfg.get("anthropic_api_key"):
+                    desc = {}
+                    for c in data["cuts"]:
+                        if c["kind"] != "image":
+                            continue
+                        n_ = int(c["no"])
+                        allv = [c.get("visual", "")] + list(c.get("shots") or [])
+                        for k_, v_ in enumerate(allv, 1):
+                            key_ = str(n_) if k_ == 1 else f"{n_}-{k_}"
+                            if (n_ if k_ == 1 else key_) in img_slots:
+                                desc[key_] = v_
+                    try:
+                        with st.spinner("AI가 그림을 보고 맞는 자리를 찾는 중… (몇십 원)"):
+                            got = ai.match_images(cfg, desc, [ups[k].getvalue() for k in pic_idx])
+                        for k, g in zip(pic_idx, got):
+                            plan0[k] = int(g) if g.isdigit() else g
+                    except Exception as e:
+                        st.warning(f"AI 자리 맞추기를 못 해서 올린 순서대로 넣었어요 ({str(e)[:80]})")
                 for u, no in zip(ups, plan0):
                     if no != "넣지 않음":
                         _save(u, no)

@@ -322,6 +322,35 @@ JSON 하나만 출력: {{"컷번호": ["가운데 화면", "끝 화면"], ...}}"
     return {str(k): v for k, v in out.items() if isinstance(v, list)}
 
 
+def match_images(cfg, slots, images):
+    """올린 그림들을 보고 어느 자리(컷)에 맞는지 AI가 짝지어 줌.
+    slots: {"2": "장면 설명", "2-2": "...", ...}, images: [bytes, ...] → ["2-2", "4", ...] (같은 길이)"""
+    import anthropic, io
+    from PIL import Image
+    c = anthropic.Anthropic(api_key=cfg["anthropic_api_key"])
+    content = [{"type": "text", "text":
+                "아래 '자리 목록'의 장면 설명과, 뒤에 오는 그림들을 비교해서 각 그림이 어느 자리에 가장 맞는지 짝지어 주세요. "
+                "한 자리에 그림 하나씩, 맞는 자리가 없으면 \"없음\". 인물 여러 명이 나란히 선 기준 그림은 \"없음\".\n"
+                "자리 목록:\n" + "\n".join(f"- {k}: {v}" for k, v in slots.items())}]
+    for i, b in enumerate(images, 1):
+        im = Image.open(io.BytesIO(b)).convert("RGB"); im.thumbnail((384, 384))
+        buf = io.BytesIO(); im.save(buf, "JPEG", quality=70)
+        content.append({"type": "text", "text": f"그림 {i}:"})
+        content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
+                                                     "data": base64.b64encode(buf.getvalue()).decode()}})
+    content.append({"type": "text", "text": 'JSON 하나만 출력: {"1": "자리", "2": "자리", ...} (그림 번호 → 자리 이름)'})
+    r = c.messages.create(model=cfg["claude_model"], max_tokens=2000, messages=[{"role": "user", "content": content}])
+    out = _json_from("".join(b.text for b in r.content if getattr(b, "type", "") == "text"))
+    res, used = [], set()
+    for i in range(1, len(images) + 1):
+        v = str(out.get(str(i), "없음"))
+        if v in slots and v not in used:
+            res.append(v); used.add(v)
+        else:
+            res.append("넣지 않음")
+    return res
+
+
 # ---------------- 2-1. 한 단어 → 주제 후보 ----------------
 def suggest_topics(cfg, channel, keyword):
     prompt = f"""당신은 조회수가 잘 나오는 한국 유튜브 스토리 작가입니다.
