@@ -511,6 +511,43 @@ if page == "② 재료 만들기":
                     st.rerun()
                 except Exception as e:
                     st.error(f"오류: {e}")
+        if data.get("format") == "longform":
+            est = ai.long_minutes(data)
+            with st.expander(f"📏 같은 이야기로 길이 늘리기 (지금 대본 약 {est:.0f}분)", expanded=est < 8):
+                st.caption("줄거리·결말은 그대로, 원래 장면도 글 그대로 두고 사이사이에 새 장면을 끼워 넣어요. "
+                           "이미 만든 그림은 번호만 바뀌어 제자리에 그대로 남고, 새 장면 그림만 플로우에서 더 만들면 돼요. "
+                           "(유튜브 중간광고는 8분이 넘어야 넣을 수 있어요)")
+                goal = st.slider("목표 길이(분)", 9, 40, max(10, min(40, int(est) * 2 + 2)), key="expand_goal")
+                if st.button(f"📏 {goal}분으로 늘리기 (Claude 몇백 원, 1~3분)", type="primary"):
+                    try:
+                        import json as _js, shutil as _sh
+                        (p / "script_늘리기전.json").write_text(_js.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                        chs = {c_["id"]: c_ for c_ in channels().values()}
+                        rules = chs.get(data.get("channel"), {}).get("rules", [])
+                        with st.spinner("장면 늘리는 중… (창을 닫지 마세요)"):
+                            mapping = ai.expand_long(cfg, data, goal, rules)
+                        # 재료 파일 번호 옮기기 (뒤에서부터 → 임시 이름 → 새 이름)
+                        tmp = p / "재료" / "_옮기는중"
+                        tmp.mkdir(exist_ok=True)
+                        moved = []
+                        for old, new in mapping:
+                            if old == new:
+                                continue
+                            for f in list((p / "재료").glob(f"{old:02d}.*")) + list((p / "재료").glob(f"{old:02d}_*")):
+                                rest = f.name[len(f"{old:02d}"):]
+                                _sh.move(str(f), str(tmp / f"{new:02d}{rest}"))
+                                moved.append(f)
+                        for f in tmp.iterdir():
+                            _sh.move(str(f), str(p / "재료" / f.name))
+                        tmp.rmdir()
+                        _sh.rmtree(p / "work", ignore_errors=True)   # 목소리 파일은 번호가 바뀌어 다시 만듦
+                        save_script(p, data)
+                        newn = [c["no"] for c in data["cuts"] if c.get("new")]
+                        st.success(f"약 {ai.long_minutes(data):.0f}분으로 늘렸어요. 새 장면 {len(newn)}개 — 아래 플로우 문구에서 "
+                                   "그림이 없는 장면만 만들어 올리면 돼요. (원래 대본은 script_늘리기전.json 에 보관)")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"오류: {e}")
         no_shots = [int(c["no"]) for c in data["cuts"] if c["kind"] == "image" and not c.get("shots")]
         if no_shots:
             st.info(f"그림 컷 {no_shots} 은 화면이 1장뿐이라 오래 멈춰 보여요. 아래 버튼을 누르면 "
@@ -580,7 +617,11 @@ if page == "② 재료 만들기":
                      f"공통: {common}", ""]
         vid_lines = ["아래 대사 영상들을 차례로 만들어 줘. 각 영상 이름은 줄 맨 앞 [ ] 안의 이름 그대로(예: v01). 첨부한 인물 기준 그림과 같은 사람으로. "
                      f"{ratio_ko}, 영상 길이는 번호마다 적힌 초, 말하는 사람 얼굴을 아주 가깝게(눈동자까지), 다른 사람은 말하지 않음, 밝게, 자막 없이.", ""]
+        only_missing = st.checkbox("그림이 아직 없는 컷만 문구에 넣기 (늘린 새 장면만 만들 때)",
+                                   value=any(c.get("new") for c in data["cuts"]), key="flow_only_missing")
         for c in data["cuts"]:
+            if only_missing and cut_file(p, int(c["no"])):
+                continue
             if c["kind"] == "video":
                 vid_lines.append(f"[v{int(c['no']):02d}] {ai.video_seconds_for(c.get('line'))}초 영상, {c.get('speaker_en') or c.get('speaker','')} 말함: \"{c['line']}\" / 장면: {c['visual']}")
             else:

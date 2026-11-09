@@ -289,6 +289,90 @@ def write_script(cfg, channel, analysis="", topic=""):
     return data
 
 
+def long_minutes(data):
+    """대본만 보고 예상 길이(분) — 나레이션 1초 ≈ 6.5자, 대사 영상은 영상 길이"""
+    sec = 0
+    for c in data.get("cuts", []):
+        sec += video_seconds_for(c.get("line")) if c.get("kind") == "video" else len(c.get("narration", "")) / 6.5
+    return sec / 60
+
+
+def expand_long(cfg, data, minutes, rules=None, log=print):
+    """같은 이야기를 그대로 두고 장면을 사이사이 끼워 넣어 목표 길이로 늘림.
+    원래 장면은 글 그대로 남김(이미 만든 그림이 그대로 맞게). 반환: [(옛 번호, 새 번호)]"""
+    from concurrent.futures import ThreadPoolExecutor
+    cuts = data.get("cuts", [])
+    head = [c for c in cuts if c.get("kind") == "video"]
+    groups, cur = [], None
+    for c in cuts:
+        if c.get("kind") == "video":
+            continue
+        if cur is None or c.get("chapter"):
+            cur = {"title": c.get("chapter") or "1장", "cuts": []}
+            groups.append(cur)
+        cur["cuts"].append(c)
+    if not groups:
+        raise ValueError("늘릴 그림 장면이 없어요.")
+    target = int(minutes * 60 * 6.5) - sum(video_seconds_for(c.get("line")) for c in head) * 6.5
+    have = sum(len(c.get("narration", "")) for g in groups for c in g["cuts"])
+    if have >= target * 0.95:
+        raise ValueError(f"이미 약 {long_minutes(data):.0f}분이라 늘릴 필요가 없어요.")
+    rules_txt = "\n".join("- " + r for r in (rules or []))
+    outline = " / ".join(g["title"] for g in groups)
+
+    def grow(gi):
+        g = groups[gi]
+        have_g = sum(len(c.get("narration", "")) for c in g["cuts"])
+        want = int(have_g * target / have)
+        add = max(1, round((want - have_g) / 230))
+        lst = "\n".join(f"[{c['no']}] {c.get('narration','')}" for c in g["cuts"])
+        pr = (f"롱폼 오디오 드라마의 한 장 '{g['title']}'입니다. 전체 장: {outline}\n등장인물: {data.get('characters','')}\n"
+              f"[채널 규칙]\n{rules_txt}\n\n[지금 장면들 — 번호] 나레이션]\n{lst}\n\n"
+              f"이 장이 너무 짧습니다. 줄거리·결말·반전은 절대 바꾸지 말고, 원래 장면은 글자 하나 바꾸지 말고 그대로 두고, "
+              f"그 사이사이에 새 장면을 {add}개 끼워 넣어 주세요. 새 장면은 앞뒤가 자연스럽게 이어지게 — 인물끼리 주고받는 대사(“둥근 따옴표”), "
+              f"작은 사건, 회상, 복선, 표정·감정 묘사로 긴장감을 더하고, 장면마다 나레이션 200~260자.\n\n"
+              '아래 JSON 하나만. 원래 장면은 {"keep": 번호}, 새 장면은 내용을 씁니다(순서대로):\n'
+              '{"cuts": [{"keep": 4}, {"narration": "...", "visual": "영어: 나레이션 앞부분에 맞는 가까운 드라마 화면(인물은 이름 대신 역할+외모)", '
+              '"shots": ["영어: 가운데 부분 화면", "영어: 끝부분 화면"]}, {"keep": 5}]}')
+        for _ in range(2):
+            try:
+                out = _json_from(_claude(cfg, pr, max_tokens=min(32000, add * 600 + 3000))).get("cuts", [])
+                kept = [int(x["keep"]) for x in out if "keep" in x]
+                if kept == [int(c["no"]) for c in g["cuts"]]:
+                    return out
+            except Exception:
+                pass
+        return [{"keep": int(c["no"])} for c in g["cuts"]]   # 실패하면 그대로
+
+    log(f"장 {len(groups)}개를 동시에 늘리는 중… (지금 약 {long_minutes(data):.0f}분 → 목표 {minutes}분)")
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(grow, range(len(groups))))
+    from .soften import soften
+    by_no = {int(c["no"]): c for c in cuts}
+    new_cuts, mapping, n = [], [], 0
+    for c in head:
+        n += 1
+        mapping.append((int(c["no"]), n))
+        new_cuts.append(dict(c, no=n))
+    for g, res in zip(groups, results):
+        first = True
+        for x in res:
+            n += 1
+            if "keep" in x:
+                old = by_no[int(x["keep"])]
+                mapping.append((int(old["no"]), n))
+                c = dict(old, no=n)
+            else:
+                c = {"no": n, "kind": "image", "chapter": "", "line": "", "speaker": "", "speaker_en": "",
+                     "narration": x.get("narration", ""), "visual": soften(x.get("visual", "")),
+                     "shots": [soften(s) for s in (x.get("shots") or [])][:2], "new": True}
+            c["chapter"] = g["title"] if first else ""
+            first = False
+            new_cuts.append(c)
+    data["cuts"] = new_cuts
+    return mapping
+
+
 def fix_short_lines(cfg, data):
     """15자보다 짧은 대사를 뜻은 그대로 두고 15~20자로 늘림 (4초 영상에 빈 시간이 안 남게)"""
     short = [c for c in data.get("cuts", []) if c.get("kind") == "video" and 0 < len((c.get("line") or "").strip()) < 15]
