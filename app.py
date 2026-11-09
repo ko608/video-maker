@@ -743,6 +743,47 @@ if page == "② 재료 만들기":
                 else:
                     all_nos.append(f"{int(c['no'])}-시작")
             plan = {}
+            # ---- 👆 눌러서 넣기: 자리 설명을 보면서 맞는 그림을 차례로 누르기 (가장 확실) ----
+            with st.expander("👆 눌러서 넣기 — 위에 나온 '지금 자리' 설명을 보고 맞는 그림을 누르면 차례로 들어가요", expanded=False):
+                order_ = []
+                for c in data["cuts"]:
+                    if c["kind"] != "image":
+                        continue
+                    n_ = int(c["no"])
+                    allv = [c.get("visual", "")] + list(c.get("shots") or [])
+                    for k_, v_ in enumerate(allv, 1):
+                        order_.append((str(n_) if k_ == 1 else f"{n_}-{k_}", v_, c.get("narration", "")))
+                pos = st.session_state.get("_click_pos", 0)
+                used_ = set(st.session_state.get("_click_used", []))
+                if pos >= len(order_):
+                    st.success("모든 그림 자리를 채웠어요! 🎉")
+                    if st.button("처음부터 다시", key="click_reset"):
+                        st.session_state["_click_pos"] = 0; st.session_state["_click_used"] = []; st.rerun()
+                else:
+                    sl, vis, nar = order_[pos]
+                    st.markdown(f"### 지금 자리: **{sl}** ({pos + 1}/{len(order_)})")
+                    st.caption(f"나레이션: {nar[:120]}…")
+                    st.caption(f"장면: {vis[:200]}")
+                    b1, b2 = st.columns(2)
+                    if b1.button("⏭ 이 자리 건너뛰기", key="click_skip"):
+                        st.session_state["_click_pos"] = pos + 1; st.rerun()
+                    if b2.button("⏮ 한 칸 뒤로", key="click_back", disabled=pos == 0):
+                        st.session_state["_click_pos"] = max(0, pos - 1); st.rerun()
+                    gc = st.columns(6)
+                    shown = 0
+                    for k, u in enumerate(ups):
+                        if Path(u.name).suffix.lower() in (".mp4", ".mov") or u.name in used_:
+                            continue
+                        box = gc[shown % 6]; shown += 1
+                        try:
+                            box.image(_upload_thumb(u.name, u.size, u.getvalue()), width="stretch")
+                        except Exception:
+                            box.write(u.name[:12])
+                        if box.button("여기 넣기", key=f"click_{k}_{u.name}"):
+                            _save(u, int(sl) if sl.isdigit() else sl)
+                            st.session_state["_click_used"] = list(used_ | {u.name})
+                            st.session_state["_click_pos"] = pos + 1
+                            st.rerun()
             grid = st.expander(f"올린 파일 {len(ups)}개와 들어간 자리 보기·바꾸기", expanded=len(ups) <= 24)
             cols = grid.columns(6 if len(ups) > 24 else 4)
             for k, u in enumerate(ups):

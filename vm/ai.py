@@ -340,11 +340,12 @@ def match_images(cfg, slots, images):
     c = anthropic.Anthropic(api_key=cfg["anthropic_api_key"])
     content = [{"type": "text", "text":
                 "아래 '자리 목록'의 장면 설명과, 뒤에 오는 그림들을 비교해서 각 그림이 어느 자리에 가장 맞는지 짝지어 주세요. "
+                "먼저 그림마다 누가(인물·옷·나이), 무엇을(행동·표정), 무엇이 크게 보이는지(얼굴/음식/물건) 속으로 확인한 뒤, 그 특징이 가장 잘 맞는 설명을 고르세요. "
                 "한 자리에 그림 하나씩, 맞는 자리가 없으면 \"없음\". 인물 여러 명이 나란히 선 기준 그림은 \"없음\".\n"
                 "자리 목록:\n" + "\n".join(f"- {k}: {v}" for k, v in slots.items())}]
     for i, b in enumerate(images, 1):
-        im = Image.open(io.BytesIO(b)).convert("RGB"); im.thumbnail((384, 384))
-        buf = io.BytesIO(); im.save(buf, "JPEG", quality=70)
+        im = Image.open(io.BytesIO(b)).convert("RGB"); im.thumbnail((512, 512))
+        buf = io.BytesIO(); im.save(buf, "JPEG", quality=75)
         content.append({"type": "text", "text": f"그림 {i}:"})
         content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
                                                      "data": base64.b64encode(buf.getvalue()).decode()}})
