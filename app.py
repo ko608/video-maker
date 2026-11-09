@@ -92,6 +92,18 @@ def new_upload(key, up):
     return True
 
 
+def slot_from_name(name):
+    """파일 이름에서 자리 읽기: c02 → 2, c02-2 / c02_2 → '2-2', v03 → 영상 3 (못 찾으면 None)"""
+    import re as _re
+    m = _re.search(r"(?<![a-z0-9])([cv])[_\- ]?(\d{1,3})(?:[_\- ](\d))?(?![0-9])", Path(name).stem.lower())
+    if not m:
+        return None
+    no = int(m.group(2))
+    if m.group(1) == "v":
+        return no
+    return f"{no}-{m.group(3)}" if m.group(3) and m.group(3) in ("2", "3") else no
+
+
 def channels():
     out = {}
     for f in sorted(config.CHANNELS.glob("*.json")):
@@ -523,20 +535,20 @@ if page == "② 재료 만들기":
         st.markdown("### 🆓 플로우로 한 번에 만들기 (무료)")
         common = (f"{ratio_ko}, {art_style(cfg)[1]}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로(옛날 초가 주막이면 허름한 초가 그대로 — 더 부유하거나 현대식으로 바꾸지 말 것), 정지 그림은 음식 클로즈업이나 인물 얼굴 클로즈업(멀리서 형체만 보이는 장면 금지), 인물은 옛날 이야기라도 단정하고 깔끔하게, 얼굴은 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷하게 보여 감정이 읽히게), 두 사람이면 한 사람 얼굴을 크게 앞에·상대는 뒤에 작고 흐리게, 주변은 흐리고 단순하게(지저분한 물건 없이), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, "
                   f"자연스러운 피부). 모든 장면에서 같은 인물: {data.get('characters','')}")
-        lines_all = ["아래 그림들을 순서대로 만들어 줘.",
+        lines_all = ["아래 그림들을 순서대로 만들어 줘. 각 그림의 이름(제목)은 줄 맨 앞 [ ] 안의 이름 그대로 지어 줘 (예: c02, c02-2).",
                      "【인물 규칙 — 꼭 지킬 것】 첨부한 '인물 기준 그림'의 사람들만 나온다. 장면마다 같은 얼굴·머리·옷 그대로. "
                      "새로운 주인공을 만들지 말 것. 모든 인물은 한국 사람. 식당 손님·하객 같은 배경 사람은 아주 작고 흐리게(얼굴 안 보이게).",
                      f"등장인물: {data.get('characters','')}",
                      f"공통: {common}", ""]
-        vid_lines = ["아래 대사 영상들을 차례로 만들어 줘. 첨부한 인물 기준 그림과 같은 사람으로. "
+        vid_lines = ["아래 대사 영상들을 차례로 만들어 줘. 각 영상 이름은 줄 맨 앞 [ ] 안의 이름 그대로(예: v01). 첨부한 인물 기준 그림과 같은 사람으로. "
                      f"{ratio_ko}, 영상 길이는 번호마다 적힌 초, 말하는 사람 얼굴을 아주 가깝게(눈동자까지), 다른 사람은 말하지 않음, 밝게, 자막 없이.", ""]
         for c in data["cuts"]:
             if c["kind"] == "video":
-                vid_lines.append(f"{c['no']}번 [영상 {ai.video_seconds_for(c.get('line'))}초] {c.get('speaker','')} 말함: \"{c['line']}\" / 장면: {c['visual']}")
+                vid_lines.append(f"[v{int(c['no']):02d}] {ai.video_seconds_for(c.get('line'))}초 영상, {c.get('speaker','')} 말함: \"{c['line']}\" / 장면: {c['visual']}")
             else:
-                lines_all.append(f"{c['no']}번 [이미지] {c['visual']}")
+                lines_all.append(f"[c{int(c['no']):02d}] {c['visual']}")
                 for k_, v_ in enumerate(c.get("shots") or [], 2):
-                    lines_all.append(f"{c['no']}-{k_}번 [이미지] {v_}")
+                    lines_all.append(f"[c{int(c['no']):02d}-{k_}] {v_}")
         lines_all = [soften(x) for x in lines_all]
         st.text_area("① 그림 전체 문구 (그림 컷만 — 2, 2-2, 2-3, 4 … 순서) — 복사해서 플로우 채팅창에 한 번에",
                      "\n".join(lines_all), height=220, key="flow_all")
@@ -584,8 +596,13 @@ if page == "② 재료 만들기":
                             pass
                     if len(files_) != len(slots_):
                         st.warning("그림 수와 자리 수가 달라요. 받은 그림이 빠졌거나 더 있는지 확인하세요 (남는 쪽은 안 넣어요).")
-                    if st.button("📥 받은 순서대로 그림 자리에 넣기 (기존 그림은 바꿔 넣어요)", type="primary"):
-                        for f, sl in zip(files_, slots_):
+                    by_name = {str(slot_from_name(f.name)): f for f in files_ if slot_from_name(f.name) is not None}
+                    if by_name:
+                        st.info(f"파일 이름(c02, c02-2 …)으로 {len(by_name)}장의 자리를 찾았어요 → 이름대로 넣어요.")
+                    if st.button("📥 그림 자리에 넣기 (이름이 있으면 이름대로, 없으면 받은 순서대로)", type="primary"):
+                        pairs_ = list(by_name.items()) if by_name else list(zip(slots_, files_))
+                        pairs_ = [(f, sl) for sl, f in pairs_] if by_name else [(f, sl) for sl, f in pairs_]
+                        for f, sl in pairs_:
                             if "-" in sl:
                                 n_, sub_ = sl.split("-"); stem = f"{int(n_):02d}_{EXTRA[int(sub_) - 2]}"
                             else:
@@ -637,8 +654,17 @@ if page == "② 재료 만들기":
                         plan0.append(vid_slots[vi] if vi < len(vid_slots) else "넣지 않음"); vi += 1
                     else:
                         plan0.append(img_slots[ii] if ii < len(img_slots) else "넣지 않음"); ii += 1
-                # 그림은 AI가 직접 보고 장면 설명과 맞는 자리에 넣기 (플로우 파일 순서가 뒤죽박죽이어도 OK)
-                pic_idx = [k for k, u in enumerate(ups) if Path(u.name).suffix.lower() not in (".mp4", ".mov")]
+                # ① 파일 이름에 자리(c02, c02-2, v01)가 있으면 그대로 — 가장 정확
+                named = 0
+                for k, u in enumerate(ups):
+                    sl = slot_from_name(u.name)
+                    if sl is not None:
+                        plan0[k] = sl; named += 1
+                if named:
+                    st.info(f"파일 이름으로 {named}개 자리를 찾았어요.")
+                # ② 이름이 없는 그림만 AI가 보고 맞추기
+                pic_idx = [k for k, u in enumerate(ups) if Path(u.name).suffix.lower() not in (".mp4", ".mov")
+                           and slot_from_name(u.name) is None]
                 if dedup and len(pic_idx) > 1:
                     # 비슷한 그림(같은 문구로 2장 나온 것) 찾기 → 한 장만 남김
                     keep, dropped = [], 0
