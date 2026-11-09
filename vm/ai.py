@@ -248,12 +248,34 @@ def write_script(cfg, channel, analysis="", topic=""):
                 have.append(t)
         data["tags"] = ",".join(have)
     data["format"] = channel.get("format", "shorts")
+    data = fix_short_lines(cfg, data)
     # 플로우가 거부하는 격한 단어를 대사·장면 묘사에서 부드럽게 (나레이션은 그대로)
     from .soften import soften
     for c in data.get("cuts", []):
         c["line"] = soften(c.get("line", ""))
         c["visual"] = soften(c.get("visual", ""))
         c["shots"] = [soften(x) for x in (c.get("shots") or [])][:2]
+    return data
+
+
+def fix_short_lines(cfg, data):
+    """15자보다 짧은 대사를 뜻은 그대로 두고 15~20자로 늘림 (4초 영상에 빈 시간이 안 남게)"""
+    short = [c for c in data.get("cuts", []) if c.get("kind") == "video" and 0 < len((c.get("line") or "").strip()) < 15]
+    if not short:
+        return data
+    items = {str(c["no"]): {"line": c["line"], "speaker": c.get("speaker", "")} for c in short}
+    prompt = ("아래 영상 대사들이 너무 짧아서 4초 영상에 빈 시간이 남습니다. 뜻·말투·감정은 그대로 두고, "
+              "띄어쓰기 포함 15~20자가 되게 자연스럽게 늘려 주세요(말끝을 흐리거나 상대를 부르는 말, 한마디 덧붙이기 등). "
+              "돈·병원·내놔 같은 격한 말은 쓰지 마세요.\n" + json.dumps(items, ensure_ascii=False) +
+              '\nJSON 하나만: {"컷번호": "늘린 대사", ...}')
+    try:
+        out = _json_from(_claude(cfg, prompt, max_tokens=1500))
+        for c in short:
+            new = str(out.get(str(c["no"]), "")).strip().strip('"')
+            if 15 <= len(new) <= 30:
+                c["line"] = new
+    except Exception:
+        pass
     return data
 
 

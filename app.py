@@ -498,6 +498,18 @@ if page == "② 재료 만들기":
         st.divider()
 
         # ---- 플로우(무료) 한 번에: 전체 문구 + 한꺼번에 올리기 ----
+        short_ = [int(c["no"]) for c in data["cuts"] if c["kind"] == "video" and 0 < len((c.get("line") or "").strip()) < 15]
+        if short_:
+            st.warning(f"대사 컷 {short_} 의 대사가 15자보다 짧아서 4초 영상에 빈 시간이 남아요.")
+            if st.button("✍️ 짧은 대사를 15~20자로 늘리기 (뜻은 그대로, 몇 원)"):
+                try:
+                    with st.spinner("대사 늘리는 중…"):
+                        ai.fix_short_lines(cfg, data)
+                    save_script(p, data)
+                    st.success("대사를 늘렸어요. 플로우 영상 문구에도 바로 반영돼요.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"오류: {e}")
         no_shots = [int(c["no"]) for c in data["cuts"] if c["kind"] == "image" and not c.get("shots")]
         if no_shots:
             st.info(f"그림 컷 {no_shots} 은 화면이 1장뿐이라 오래 멈춰 보여요. 아래 버튼을 누르면 "
