@@ -262,7 +262,8 @@ if page == "① 분석·대본":
     if ch.get("format") == "longform":
         mins = st.select_slider("⏱ 영상 길이 (분)", options=[5, 8, 10, 15, 20, 25, 30], value=10,
                                 help="길수록 그림·목소리 개수가 늘어 비용과 만드는 시간이 늘어요")
-        ch["cuts"] = max(10, round(mins * 60 / 28))          # 장면 1개 ≈ 25~30초
+        ch["cuts"] = max(10, round(mins * 60 / 34))          # 장면 1개 ≈ 30~35초 (나레이션 200~260자)
+        ch["minutes"] = mins
         ch["chapters"] = max(3, min(10, mins // 3 + 1))
         st.caption(f"→ 장면 약 {ch['cuts']}개, {ch['chapters']}개 장으로 써요. "
                    f"(자동 그림이면 대략 {ch['cuts'] * 70:,}~{ch['cuts'] * 130:,}원)")

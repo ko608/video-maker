@@ -191,13 +191,13 @@ LONG_SCRIPT_PROMPT = """당신은 시청자가 20~30분 동안 한 번도 넘기
  ],
  "chapters": [
   {{"title": "장 제목(짧게)", "cuts": [
-    {{"kind": "image", "narration": "나레이션 150~230자. 인물 대사를 “둥근 따옴표”로 2~4번 넣어 드라마처럼(곧은 따옴표는 절대 쓰지 말 것)", "visual": "영어: 나레이션 앞부분 내용에 맞는 드라마 화면", "shots": ["영어: 나레이션 가운데에 맞는 화면(반응 얼굴·분위기)", "영어: 나레이션 끝부분에 맞는 화면"]}}
+    {{"kind": "image", "narration": "나레이션 200~260자. 인물 대사를 “둥근 따옴표”로 2~4번 넣어 드라마처럼(곧은 따옴표는 절대 쓰지 말 것)", "visual": "영어: 나레이션 앞부분 내용에 맞는 드라마 화면", "shots": ["영어: 나레이션 가운데에 맞는 화면(반응 얼굴·분위기)", "영어: 나레이션 끝부분에 맞는 화면"]}}
   ]}}
  ]
 }}
 opening은 영상 맨 앞 '대사 영상' {nopen}개(각 4~6초) — 이야기의 가장 강렬한 갈등 순간을 먼저 보여 주고, 1장 나레이션이 '모든 일은 그날 아침부터 시작됐습니다'처럼 이어받게.
 chapters는 {nchap}개, 전체 cuts는 {ncuts}개 안팎(장마다 비슷하게). 장 안의 컷은 모두 kind "image"(대사 영상은 맨 앞 opening에만). 그림은 그 순간 이야기에 딱 맞는 장면으로.
-image 컷 나레이션은 150~230자를 꼭 지켜 전체 길이를 맞추세요.
+image 컷 나레이션은 200~260자를 꼭 지켜 전체 길이를 맞추세요(전체 나레이션 합계 = 목표 분 × 약 390자).
 대사(video) 컷은 말하는 사람 얼굴 클로즈업, 나레이션(image) 컷은 나레이션 내용에 딱 맞는 상대방의 반응이나 그 순간의 분위기(음식·물건·자리) — 엉뚱한 장면 금지. visual은 영화처럼 멀고 웅장한 화면이 아니라 '한국 TV 드라마' 화면처럼: 인물 중심, 대화하는 두 사람(투샷), 어깨 너머로 상대 얼굴(오버숄더), 말 듣는 사람의 반응 클로즈업, 음식 클로즈업. 멀리서 찍은 장면·풍경만 있는 장면 금지.
 대사(line)와 visual에는 돈·병원·내놔 같은 격한 말 대신 부드러운 말을 쓰세요. 컷마다 visual은 서로 달라야 합니다."""
 
@@ -208,6 +208,37 @@ def _write_long(cfg, channel, analysis, topic):
         analysis=analysis or "(분석 없음)", topic=topic or "(자유 주제)",
         ncuts=channel["cuts"], nchap=channel.get("chapters", 5), nopen=int(channel.get("opening_videos", 3)))
     data = _json_from(_claude(cfg, prompt, max_tokens=min(64000, int(channel['cuts']) * 450 + 3000)))
+    # ---- 길이 맞추기: 목표 분량보다 짧으면 장마다 늘려 쓰기 (동시에 여러 장) ----
+    minutes = float(channel.get("minutes") or channel["cuts"] * 28 / 60)
+    target_chars = int(minutes * 60 * 6.5)          # 나레이션 1초 ≈ 6.5자(띄어쓰기 포함)
+    chs = data.get("chapters", [])
+    have = sum(len(c.get("narration", "")) for chp in chs for c in chp.get("cuts", []))
+    if chs and have < target_chars * 0.85:
+        per = target_chars // len(chs)
+        outline = " / ".join(f"{i + 1}장 {c_.get('title','')}" for i, c_ in enumerate(chs))
+        from concurrent.futures import ThreadPoolExecutor
+
+        def grow(idx):
+            chp = chs[idx]
+            cur = "\n".join(c.get("narration", "") for c in chp.get("cuts", []))
+            need_cuts = max(len(chp.get("cuts", [])), round(per / 220))
+            pr = (f"아래는 오디오 드라마 롱폼의 {idx + 1}장 '{chp.get('title','')}'입니다. 전체 장 흐름: {outline}\n"
+                  f"등장인물: {data.get('characters','')}\n[채널 규칙]\n" + "\n".join("- " + r for r in channel["rules"]) +
+                  f"\n\n지금 이 장은 너무 짧습니다(약 {len(cur)}자). 줄거리·반전·장 끝의 절벽 끝 마무리는 그대로 두고, "
+                  f"인물끼리 주고받는 대사(“둥근 따옴표”)·작은 사건·복선·감정 묘사를 더해 나레이션 합계 약 {per}자, "
+                  f"컷 {need_cuts}개 안팎으로 늘려 다시 써 주세요. 컷마다 나레이션 200~260자.\n\n[지금 내용]\n{cur}\n\n"
+                  '아래 JSON 하나만: {"cuts": [{"kind": "image", "narration": "...", "visual": "영어: 나레이션 앞부분에 맞는 화면(인물은 이름 대신 역할+외모)", '
+                  '"shots": ["영어: 가운데", "영어: 끝부분"]}]}')
+            try:
+                out = _json_from(_claude(cfg, pr, max_tokens=min(32000, need_cuts * 500 + 2000)))
+                if len("".join(c.get("narration", "") for c in out.get("cuts", []))) > len(cur):
+                    chp["cuts"] = out["cuts"]
+            except Exception:
+                pass
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            list(pool.map(grow, range(len(chs))))
+
     cuts, n = [], 0
     for o in data.get("opening", [])[:int(channel.get("opening_videos", 3))]:
         n += 1
