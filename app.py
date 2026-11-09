@@ -581,7 +581,7 @@ if page == "② 재료 만들기":
                      f"{ratio_ko}, 영상 길이는 번호마다 적힌 초, 말하는 사람 얼굴을 아주 가깝게(눈동자까지), 다른 사람은 말하지 않음, 밝게, 자막 없이.", ""]
         for c in data["cuts"]:
             if c["kind"] == "video":
-                vid_lines.append(f"[v{int(c['no']):02d}] {ai.video_seconds_for(c.get('line'))}초 영상, {c.get('speaker','')} 말함: \"{c['line']}\" / 장면: {c['visual']}")
+                vid_lines.append(f"[v{int(c['no']):02d}] {ai.video_seconds_for(c.get('line'))}초 영상, {c.get('speaker_en') or c.get('speaker','')} 말함: \"{c['line']}\" / 장면: {c['visual']}")
             else:
                 lines_all.append(f"[c{int(c['no']):02d}] {c['visual']}")
                 for k_, v_ in enumerate(c.get("shots") or [], 2):
