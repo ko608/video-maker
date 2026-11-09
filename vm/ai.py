@@ -155,7 +155,7 @@ line(대사)과 visual에는 돈·현금·병원·진료·수술·피·죽음·�
 
 
 LONG_SCRIPT_PROMPT = """당신은 시청자가 20~30분 동안 한 번도 넘기지 못하는 한국 '주말 드라마' 작가 겸 유튜브 오디오 드라마 작가입니다.
-화면은 드라마 장면 그림 + 나레이션(인물 대사를 많이 포함)으로 진행되고, 장마다 가장 센 순간은 실제 대사 영상으로 보여 줍니다.
+화면은 맨 앞 2~3컷만 실제 대사 영상이고, 나머지는 이야기에 맞는 장면 그림 + 나레이션(인물 대사를 많이 포함)으로 진행됩니다.
 아래 [채널 규칙]을 지키세요.
 
 [채널] {name}
@@ -191,13 +191,12 @@ LONG_SCRIPT_PROMPT = """당신은 시청자가 20~30분 동안 한 번도 넘기
  ],
  "chapters": [
   {{"title": "장 제목(짧게)", "cuts": [
-    {{"kind": "image", "narration": "나레이션 150~230자. 인물 대사를 “둥근 따옴표”로 2~4번 넣어 드라마처럼(곧은 따옴표는 절대 쓰지 말 것)", "visual": "영어: 나레이션 앞부분 내용에 맞는 드라마 화면", "shots": ["영어: 나레이션 가운데에 맞는 화면(반응 얼굴·분위기)", "영어: 나레이션 끝부분에 맞는 화면"]}},
-    {{"kind": "video", "line": "이 장에서 가장 센 순간의 대사(15~40자)", "speaker": "누가 누구에게", "speaker_en": "English: ONLY the person who speaks + look", "visual": "영어 드라마 장면: 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채움, 눈동자까지 또렷)"}}
+    {{"kind": "image", "narration": "나레이션 150~230자. 인물 대사를 “둥근 따옴표”로 2~4번 넣어 드라마처럼(곧은 따옴표는 절대 쓰지 말 것)", "visual": "영어: 나레이션 앞부분 내용에 맞는 드라마 화면", "shots": ["영어: 나레이션 가운데에 맞는 화면(반응 얼굴·분위기)", "영어: 나레이션 끝부분에 맞는 화면"]}}
   ]}}
  ]
 }}
 opening은 영상 맨 앞 '대사 영상' {nopen}개(각 4~6초) — 이야기의 가장 강렬한 갈등 순간을 먼저 보여 주고, 1장 나레이션이 '모든 일은 그날 아침부터 시작됐습니다'처럼 이어받게.
-chapters는 {nchap}개, 전체 cuts는 {ncuts}개 안팎(장마다 비슷하게). 각 장에 kind "video" 컷을 정확히 1개 — 그 장의 가장 센 순간에 넣는다. 나머지는 kind "image".
+chapters는 {nchap}개, 전체 cuts는 {ncuts}개 안팎(장마다 비슷하게). 장 안의 컷은 모두 kind "image"(대사 영상은 맨 앞 opening에만). 그림은 그 순간 이야기에 딱 맞는 장면으로.
 image 컷 나레이션은 150~230자를 꼭 지켜 전체 길이를 맞추세요.
 대사(video) 컷은 말하는 사람 얼굴 클로즈업, 나레이션(image) 컷은 나레이션 내용에 딱 맞는 상대방의 반응이나 그 순간의 분위기(음식·물건·자리) — 엉뚱한 장면 금지. visual은 영화처럼 멀고 웅장한 화면이 아니라 '한국 TV 드라마' 화면처럼: 인물 중심, 대화하는 두 사람(투샷), 어깨 너머로 상대 얼굴(오버숄더), 말 듣는 사람의 반응 클로즈업, 음식 클로즈업. 멀리서 찍은 장면·풍경만 있는 장면 금지.
 대사(line)와 visual에는 돈·병원·내놔 같은 격한 말 대신 부드러운 말을 쓰세요. 컷마다 visual은 서로 달라야 합니다."""
@@ -218,7 +217,7 @@ def _write_long(cfg, channel, analysis, topic):
     for ch in data.get("chapters", []):
         for i, c in enumerate(ch.get("cuts", [])):
             n += 1
-            kind = "video" if c.get("kind") == "video" and c.get("line") else "image"
+            kind = "image"     # 롱폼은 맨 앞 opening만 대사 영상, 장 안은 모두 그림
             cuts.append({"no": n, "kind": kind, "chapter": ch.get("title", "") if i == 0 else "",
                          "line": c.get("line", "") if kind == "video" else "",
                          "speaker": c.get("speaker", "") if kind == "video" else "",
