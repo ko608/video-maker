@@ -321,16 +321,27 @@ if page == "① 분석·대본":
         except Exception as e:
             st.error(f"오류: {e}")
 
-    with st.expander("📝 내 제목·대본 통째로 넣기 (AI가 글은 그대로 두고 컷만 나눠 줘요)"):
+    with st.expander("📝 내 제목·대본 통째로 넣기 (우리 형식으로 다듬기 / 글 그대로)"):
         my_title = st.text_input("제목 (있으면)", key="my_title")
         my_text = st.text_area("대본 전체 붙여 넣기 — 대사·나레이션 그대로 쓰여요",
                                height=260, key="my_text",
                                placeholder="예)\n아들: 엄마 생신인데 또 엄마가 계산해?\n(나레이션) 그날 저녁, 식당 안은 조용해졌습니다…")
-        st.caption("AI는 글을 고치지 않고, 대사는 대사 영상 컷으로, 나레이션은 그림 컷으로 나누고 장면 묘사·썸네일 문구·태그만 붙여요.")
-        if st.button("✂️ 이 대본으로 컷 나누기", type="primary", disabled=not my_text.strip()):
+        mode_ = st.radio("어떻게 쓸까요?", ["우리 형식으로 다듬기 (줄거리·핵심 대사는 살리고, 컷 수·길이·대사 길이·마무리 문장을 채널 규칙에 맞게)",
+                                         "글 그대로 쓰기 (한 글자도 안 바꾸고 컷만 나누기)"], key="my_mode")
+        if st.button("✂️ 이 대본으로 만들기", type="primary", disabled=not my_text.strip()):
             try:
-                with st.spinner("컷 나누는 중… (1분 안팎)"):
-                    st.session_state["draft"] = ai.script_from_text(cfg, ch, my_title, my_text)
+                with st.spinner("만드는 중… (1분 안팎)"):
+                    if mode_.startswith("우리 형식"):
+                        topic_ = ("[원본 대본 — 이 이야기의 줄거리·인물·핵심 대사·반전은 그대로 살리고, "
+                                  "채널 규칙(컷 수, 컷별 구성, 대사 길이, 나레이션 길이, 화면 원칙, 마지막 문장)에 맞게 다시 쓸 것. "
+                                  "원본 대사 중 좋은 말은 최대한 살려 쓴다]\n"
+                                  + (f"제목: {my_title}\n" if my_title else "") + my_text)
+                        d_ = ai.write_script(cfg, ch, "", topic_)
+                        if my_title:
+                            d_["title_options"] = [my_title] + [t for t in d_.get("title_options", []) if t != my_title][:2]
+                        st.session_state["draft"] = d_
+                    else:
+                        st.session_state["draft"] = ai.script_from_text(cfg, ch, my_title, my_text)
                     st.session_state["draft_channel"] = ch["id"]
                 st.success("완료! 아래에서 확인하고 고친 뒤 저장하세요.")
             except Exception as e:
