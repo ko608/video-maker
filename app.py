@@ -43,6 +43,15 @@ def _small(path_str, mtime, width=360):
     return b.getvalue()
 
 
+@st.cache_data(show_spinner=False, max_entries=400)
+def _upload_thumb(name, size, data):
+    from PIL import Image as _I
+    import io
+    im = _I.open(io.BytesIO(data)).convert("RGB"); im.thumbnail((200, 360))
+    b = io.BytesIO(); im.save(b, "JPEG", quality=70)
+    return b.getvalue()
+
+
 def show_small(box, path, caption=None):
     path = Path(path)
     box.image(_small(str(path), path.stat().st_mtime), caption=caption, width="stretch")
@@ -563,10 +572,19 @@ if page == "② 재료 만들기":
                             if (n_ if k_ == 1 else key_) in img_slots:
                                 desc[key_] = v_
                     try:
-                        with st.spinner("AI가 그림을 보고 맞는 자리를 찾는 중… (몇십 원)"):
-                            got = ai.match_images(cfg, desc, [ups[k].getvalue() for k in pic_idx])
-                        for k, g in zip(pic_idx, got):
-                            plan0[k] = int(g) if g.isdigit() else g
+                        # 20장씩 나눠서 맞추기 (한 번에 너무 많으면 AI가 못 받음) — 이미 찬 자리는 다음 묶음에서 뺌
+                        remaining = dict(desc)
+                        bar = st.progress(0.0, text="AI가 그림을 보고 맞는 자리를 찾는 중…")
+                        for b0 in range(0, len(pic_idx), 20):
+                            chunk = pic_idx[b0:b0 + 20]
+                            if not remaining:
+                                break
+                            got = ai.match_images(cfg, remaining, [ups[k].getvalue() for k in chunk])
+                            for k, g in zip(chunk, got):
+                                plan0[k] = int(g) if g.isdigit() else g
+                                remaining.pop(g, None)
+                            bar.progress(min(1.0, (b0 + len(chunk)) / len(pic_idx)),
+                                         text=f"AI 자리 맞추기 {min(b0 + len(chunk), len(pic_idx))}/{len(pic_idx)}")
                     except Exception as e:
                         st.warning(f"AI 자리 맞추기를 못 해서 올린 순서대로 넣었어요 ({str(e)[:80]})")
                 for u, no in zip(ups, plan0):
@@ -585,17 +603,15 @@ if page == "② 재료 만들기":
                 else:
                     all_nos.append(f"{int(c['no'])}-시작")
             plan = {}
-            cols = st.columns(4)
+            grid = st.expander(f"올린 파일 {len(ups)}개와 들어간 자리 보기·바꾸기", expanded=len(ups) <= 24)
+            cols = grid.columns(6 if len(ups) > 24 else 4)
             for k, u in enumerate(ups):
-                box = cols[k % 4]
+                box = cols[k % len(cols)]
                 if Path(u.name).suffix.lower() in (".mp4", ".mov"):
                     box.markdown(f"🎬 **영상**  \n{u.name[:18]}")
                 else:
                     try:
-                        from PIL import Image as _I
-                        import io
-                        im = _I.open(io.BytesIO(u.getvalue())); im.thumbnail((240, 420))
-                        box.image(im, width="stretch")
+                        box.image(_upload_thumb(u.name, u.size, u.getvalue()), width="stretch")
                     except Exception:
                         box.write(u.name[:18])
                 g = plan0[k] if k < len(plan0) and plan0[k] in all_nos else "넣지 않음"
