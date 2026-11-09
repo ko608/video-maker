@@ -348,9 +348,22 @@ def match_images(cfg, slots, images):
         content.append({"type": "text", "text": f"그림 {i}:"})
         content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
                                                      "data": base64.b64encode(buf.getvalue()).decode()}})
-    content.append({"type": "text", "text": 'JSON 하나만 출력: {"1": "자리", "2": "자리", ...} (그림 번호 → 자리 이름)'})
-    r = c.messages.create(model=cfg["claude_model"], max_tokens=2000, messages=[{"role": "user", "content": content}])
-    out = _json_from("".join(b.text for b in r.content if getattr(b, "type", "") == "text"))
+    content.append({"type": "text", "text": '설명 없이 JSON 하나만 출력: {"1": "자리", "2": "자리", ...} (그림 번호 → 자리 이름, 자리 목록에 있는 이름 그대로)'})
+    out = {}
+    for _try in range(2):
+        r = c.messages.create(model=cfg["claude_model"], max_tokens=2000,
+                              system="You match images to slots. Reply with ONLY a JSON object, no other text.",
+                              messages=[{"role": "user", "content": content}])
+        txt = "".join(b.text for b in r.content if getattr(b, "type", "") == "text")
+        try:
+            out = _json_from(txt)
+            break
+        except Exception:
+            # JSON이 아니어도 '1: 2-2' 같은 줄은 읽어 보기
+            for m in re.finditer(r"(\d+)\s*[:：→-]+\s*\"?([0-9]+(?:-[0-9]+)?)\"?", txt):
+                out[m.group(1)] = m.group(2)
+            if out:
+                break
     res, used = [], set()
     for i in range(1, len(images) + 1):
         v = str(out.get(str(i), "없음"))

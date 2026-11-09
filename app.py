@@ -575,18 +575,27 @@ if page == "② 재료 만들기":
                         # 20장씩 나눠서 맞추기 (한 번에 너무 많으면 AI가 못 받음) — 이미 찬 자리는 다음 묶음에서 뺌
                         remaining = dict(desc)
                         bar = st.progress(0.0, text="AI가 그림을 보고 맞는 자리를 찾는 중…")
-                        for b0 in range(0, len(pic_idx), 20):
-                            chunk = pic_idx[b0:b0 + 20]
+                        fails = 0
+                        for b0 in range(0, len(pic_idx), 12):
+                            chunk = pic_idx[b0:b0 + 12]
                             if not remaining:
-                                break
-                            got = ai.match_images(cfg, remaining, [ups[k].getvalue() for k in chunk])
+                                for k in chunk:
+                                    plan0[k] = "넣지 않음"
+                                continue
+                            try:
+                                got = ai.match_images(cfg, remaining, [ups[k].getvalue() for k in chunk])
+                            except Exception:
+                                fails += 1
+                                continue      # 이 묶음만 순서대로 둠
                             for k, g in zip(chunk, got):
                                 plan0[k] = int(g) if g.isdigit() else g
                                 remaining.pop(g, None)
                             bar.progress(min(1.0, (b0 + len(chunk)) / len(pic_idx)),
                                          text=f"AI 자리 맞추기 {min(b0 + len(chunk), len(pic_idx))}/{len(pic_idx)}")
+                        if fails:
+                            st.warning(f"AI 자리 맞추기 중 {fails}묶음은 못 해서 그 부분만 올린 순서대로 넣었어요. 아래 '🤖 다시 맞추기'를 눌러 보세요.")
                     except Exception as e:
-                        st.warning(f"AI 자리 맞추기를 못 해서 올린 순서대로 넣었어요 ({str(e)[:80]})")
+                        st.warning(f"AI 자리 맞추기를 못 해서 올린 순서대로 넣었어요 ({str(e)[:80]}). 아래 '🤖 다시 맞추기'를 눌러 보세요.")
                 for u, no in zip(ups, plan0):
                     if no != "넣지 않음":
                         _save(u, no)
@@ -617,6 +626,20 @@ if page == "② 재료 만들기":
                 g = plan0[k] if k < len(plan0) and plan0[k] in all_nos else "넣지 않음"
                 plan[k] = box.selectbox("컷", all_nos, index=all_nos.index(g), key=f"assign_{k}_{u.name}",
                                         label_visibility="collapsed")
+            if st.button("🤖 AI로 처음부터 다시 맞추기 (이번에 올린 파일이 들어간 자리를 비우고 다시)"):
+                for no in st.session_state.get("_bulk_plan", []):
+                    if no == "넣지 않음":
+                        continue
+                    if isinstance(no, str) and no.endswith("-시작"):
+                        stem = f"{int(no.split('-')[0]):02d}_첫장면"
+                    elif isinstance(no, str) and "-" in no:
+                        n_, sub_ = no.split("-"); stem = f"{int(n_):02d}_{EXTRA[int(sub_) - 2]}"
+                    else:
+                        stem = f"{int(no):02d}"
+                    for old in (p / "재료").glob(f"{stem}.*"):
+                        old.unlink()
+                st.session_state["_bulk_sig"] = None
+                st.rerun()
             if st.button("📥 바꾼 번호로 다시 넣기"):
                 for k, u in enumerate(ups):
                     if plan[k] != "넣지 않음":
