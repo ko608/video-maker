@@ -1,6 +1,6 @@
 {
   "id": "oneuli_shorts",
-  "name": "오늘이선녀 · 가족 사연 쇼츠 (약 55초)",
+  "name": "오늘이선녀 · 가족 사연 + 사주 정보 쇼츠 (약 60초)",
   "format": "shorts",
   "cuts": 6,
   "rules": [
@@ -8,7 +8,10 @@
     "1컷 첫 마디에서 갈등이 바로 터져야 한다. 설명으로 시작하지 말 것.",
     "10초마다 다음이 궁금해지게 — 뻔한 '고생해서 잘됐다' 흐름 금지. 매 컷 끝에 작은 의문이나 반전.",
     "주인공은 여성(며느리·아내·딸·엄마·시어머니 등). 돈·결혼·가족 비밀이 걸린 갈등이 가장 잘 된다.",
-    "4컷에서 '사주가 적힌 종이/메모' 같은 사주 반전이 드러나고, 오해가 풀린다.",
+    "4컷에서 사주 반전: 인물의 사주(예: 일간·오행·띠·궁합·대운)가 드러나며 그 사람의 행동이 '왜 그랬는지' 이해되고 오해가 풀린다.",
+    "[정보형 — 꼭 넣기] 2·4·6컷 나레이션 중 최소 두 컷에 이야기와 연결된 '사주 지식 한 가지'를 쉽게 풀어 설명한다. 예: 오행의 상생·상극(물과 불이 부딪히는 궁합), 일간(나를 뜻하는 글자), 재성(재물을 다루는 기운), 인성(돌봄·어머니의 기운), 대운(10년마다 바뀌는 흐름), 띠 궁합.",
+    "[왜 지금도 사주인가] 6컷에서 '왜 요즘 시대에도 사주를 그냥 넘길 수 없는지'를 한 문장으로 짚는다 — 예: 사주는 미래를 정해 주는 게 아니라 나와 가족의 기질·흐름을 이해하는 오래된 지도라서, 다툼 대신 이해를 돕는다.",
+    "사주 설명은 전통 명리학에서 '그렇게 본다'는 관점으로 쓴다 — '반드시 ~된다', '과학적으로 증명됐다' 같은 단정 금지, 겁주는 표현 금지.",
     "6컷 나레이션 마지막 문장은 '우리 가족 ○○운이 궁금하다면, 사주자판기에서 확인해 보세요.' 형식.",
     "대사 영상 길이는 대사 글자 수에 맞춘다: 15~20자 = 4초, 21~30자 = 6초, 31~40자 = 8초, 41~50자 = 10초 (띄어쓰기 포함, 15자보다 짧게 쓰지 않는다)",
     "숫자는 나레이션에서 한글로 풀어 쓴다(예: 삼천만 원, 십 년).",
@@ -16,7 +19,7 @@
   ],
   "upload": {
     "description_tail": "내 사주·우리 가족 궁합은 👉 sajujapangi.com",
-    "base_tags": "오늘이선녀,사주자판기,사주,가족사연,감동사연,반전,운세,사주풀이,shorts",
+    "base_tags": "오늘이선녀,사주자판기,사주,가족사연,감동사연,반전,운세,사주풀이,명리학,오행,궁합,대운,shorts",
     "pinned_tail": "띠를 남겨 주시면 오늘이 선녀가 한 줄 운세를 드려요 💬"
   },
   "visual_style": "Bright clean daylight, evenly lit, no dim or moody lighting, no deep shadows; the people are crisp and sharp with good contrast, no glow, no haze, no overexposed background. Tight face close-ups: the face fills most of the frame (forehead to chin about 55-65 percent of the frame height), eyes sharp and in focus with visible catchlights so the emotion can be read in the pupils; when two people talk, show one face large in front and the other smaller and blurred behind. Korean weekend TV drama look (not a cinematic movie look): character-focused framing — two-shots of people talking, over-the-shoulder shots, reaction close-ups, food close-ups; even soft daylight, natural colors. Characters always look neat and well-groomed with clean tidy clothes and clean faces, even in old-days or poor settings (the place may be old, the people are tidy). bright exposure and high-key lighting, plenty of soft daylight, clear and vivid but natural colors, no dark or gloomy look. The setting, buildings, rooms, props and clothes must match the story's era and place exactly as described in the scene (e.g. an old shabby thatched-roof tavern in the mountains stays humble and old-fashioned; a modern apartment stays modern) — brightness only, never make places richer or more modern than described. vertical 9:16, single scene in one frame (no collage, no panels, no split screen), no text, no subtitles, no watermark"
