@@ -1,0 +1,25 @@
+{
+  "id": "oneuli_longform",
+  "name": "오늘이선녀 · 사극 롱폼 (사주·풍수·관상·별자리 이야기, 10~30분)",
+  "format": "longform",
+  "cuts": 30,
+  "chapters": 5,
+  "opening_videos": 3,
+  "rules": [
+    "조선 시대를 배경으로 한 사극 오디오 드라마. 사주·풍수(명당·집터·묏자리)·관상·작명·천문(별자리, 혜성, 관상감) 중 하나가 이야기의 열쇠가 된다.",
+    "잘 알려지지 않은 옛이야기 느낌으로 — 저잣거리의 관상쟁이, 몰락한 양반가, 지관(풍수가), 관상감의 젊은 관원, 사주단자가 바뀐 혼례, 혜성이 뜬 해에 태어난 아이 등.",
+    "등장인물과 사건은 모두 가상. 실존 왕·위인을 주인공으로 삼거나 실제 역사 사건처럼 꾸미지 않는다(관상감·사주단자·지관 같은 제도·풍습은 실제대로 정확히).",
+    "[정보형 — 꼭 넣기] 장마다 이야기와 연결된 옛 지식 한 가지를 나레이션으로 쉽게 풀어 준다: 사주 여덟 글자와 오행, 관상에서 보는 눈·코·이마, 배산임수 명당, 조선의 천문 관측과 객성(혜성), 이름 글자의 오행 등. 전통에서 '그렇게 보았다'는 관점으로, 단정·겁주기 금지.",
+    "첫 컷 첫 문장부터 사건이 터진다(예: '이 아이는 혜성이 뜬 밤에 태어났으니, 집안을 망칠 것이오!'). 배경 설명으로 시작 금지.",
+    "30초마다 새 의심·위기·단서. 가운데 장에 첫 반전, 마지막 장에 운명이 뒤집히는 가장 큰 반전 — '운명은 정해진 것이 아니라 읽고 다스리는 것'이라는 여운.",
+    "마지막 컷: 여운 + '여러분의 사주에는 어떤 별이 떠 있을까요? 사주자판기에서 확인해 보세요.' + '오늘이선녀였습니다.'",
+    "말투는 사극체(~하오, ~하옵니다, ~느냐)를 대사에 쓰고, 나레이션은 쉬운 요즘 말로.",
+    "숫자는 한글로 풀어 쓴다. 폭력·잔혹 묘사 금지."
+  ],
+  "upload": {
+    "description_tail": "※ 이 영상은 전통 사주·풍수·관상 이야기를 바탕으로 한 창작 사극이며, 등장인물과 사건은 모두 가상입니다.\n내 사주·우리 가족 궁합은 👉 sajujapangi.com",
+    "base_tags": "오늘이선녀,사주자판기,사극,조선,사주,풍수,관상,명리학,오행,옛날이야기,야담,오디오드라마,운명",
+    "pinned_tail": "다음엔 어떤 옛 운명 이야기가 궁금하세요? 댓글로 남겨 주세요 🌙"
+  },
+  "visual_style": "Bright clean daylight, evenly lit, no dim or moody lighting, no deep shadows; the people are crisp and sharp with good contrast, no glow, no haze, no overexposed background. Tight face close-ups: the face fills most of the frame (forehead to chin about 55-65 percent of the frame height), eyes sharp and in focus with visible catchlights so the emotion can be read in the pupils; when two people talk, show one face large in front and the other smaller and blurred behind. Korean historical TV drama (sageuk) look set in the Joseon dynasty — hanbok, hanok houses, markets, lantern light softened to bright (not a cinematic movie look): character-focused framing — two-shots of people talking, over-the-shoulder shots, reaction close-ups, food close-ups; even soft daylight, natural colors. Characters always look neat and well-groomed with clean tidy clothes and clean faces, even in old-days or poor settings (the place may be old, the people are tidy). bright exposure and high-key lighting, plenty of soft daylight, clear and vivid but natural colors, no dark or gloomy look. The setting, buildings, rooms, props and clothes must match the story's era and place exactly as described in the scene — brightness only, never make places richer or more modern than described. horizontal 16:9 wide shot composition, single scene in one frame (no collage, no panels, no split screen), no text, no subtitles, no watermark"
+}
