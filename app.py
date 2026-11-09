@@ -544,6 +544,60 @@ if page == "② 재료 만들기":
             st.text_area("②-1 대사 영상 문구 한 번에 — ①의 그림이 다 나온 뒤, 같은 채팅창에 이어서 붙여 넣기",
                          "\n".join(soften(x) for x in vid_lines), height=150, key="flow_vids")
         empty = [int(c["no"]) for c in data["cuts"] if not cut_file(p, int(c["no"]))]
+        with st.expander("📂 받은 순서대로 넣기 (가장 정확) — 다운로드 폴더에서 '받은 시간 순서'로 바로 가져오기", expanded=True):
+            st.caption("플로우에서 그림을 1번부터 차례로 받았다면, 받은 시간 순서 = 컷 순서예요. "
+                       "파일 이름이 뒤죽박죽이어도 상관없어요.")
+            imp_dir = st.text_input("그림을 받은 폴더 (주소창에서 복사해 붙여 넣기)", cfg.get("import_dir", str(Path.home() / "Downloads")),
+                                    key="imp_dir")
+            ic1, ic2, ic3 = st.columns(3)
+            mins = ic1.number_input("최근 몇 분 안에 받은 것", 5, 1440, 120, step=10)
+            rev = ic2.checkbox("거꾸로 (최신 → 오래된 순)", value=False)
+            dd2 = ic3.checkbox("비슷한 그림 2장이면 한 장만", value=True)
+            folder = Path(imp_dir.strip().strip('"'))
+            if folder.is_dir():
+                import time as _t
+                now_ = _t.time()
+                files_ = [f for f in folder.iterdir() if f.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")
+                          and now_ - f.stat().st_mtime <= mins * 60 and "기준" not in f.name]
+                files_.sort(key=lambda f: f.stat().st_mtime, reverse=rev)
+                if dd2 and len(files_) > 1:
+                    kept = []
+                    for f in files_:
+                        sg = _img_sig(f.name, f.stat().st_size, f.read_bytes())
+                        if not any(_similar(sg, k_[1]) for k_ in kept):
+                            kept.append((f, sg))
+                    files_ = [k_[0] for k_ in kept]
+                slots_ = []
+                for c in data["cuts"]:
+                    if c["kind"] != "image":
+                        continue
+                    n_ = int(c["no"])
+                    slots_.append(str(n_))
+                    slots_ += [f"{n_}-{k_}" for k_ in range(2, 2 + len(c.get("shots") or []))]
+                st.write(f"그림 **{len(files_)}장** 찾음 → 그림 자리 **{len(slots_)}곳** (2, 2-2, 2-3, 4 … 순서)")
+                if files_:
+                    pv = st.columns(8)
+                    for i_, (f, sl) in enumerate(list(zip(files_, slots_))[:16]):
+                        try:
+                            pv[i_ % 8].image(_small(str(f), f.stat().st_mtime, 160), caption=sl, width="stretch")
+                        except Exception:
+                            pass
+                    if len(files_) != len(slots_):
+                        st.warning("그림 수와 자리 수가 달라요. 받은 그림이 빠졌거나 더 있는지 확인하세요 (남는 쪽은 안 넣어요).")
+                    if st.button("📥 받은 순서대로 그림 자리에 넣기 (기존 그림은 바꿔 넣어요)", type="primary"):
+                        for f, sl in zip(files_, slots_):
+                            if "-" in sl:
+                                n_, sub_ = sl.split("-"); stem = f"{int(n_):02d}_{EXTRA[int(sub_) - 2]}"
+                            else:
+                                stem = f"{int(sl):02d}"
+                            for old in (p / "재료").glob(f"{stem}.*"):
+                                old.unlink()
+                            (p / "재료" / f"{stem}{f.suffix.lower()}").write_bytes(f.read_bytes())
+                        cfg["import_dir"] = str(folder); config.save(cfg)
+                        st.success(f"{min(len(files_), len(slots_))}장을 받은 순서대로 넣었어요.")
+                        st.rerun()
+            else:
+                st.caption("폴더를 찾을 수 없어요. 파일 탐색기 주소창을 눌러 주소를 복사해 붙여 넣으세요.")
         ups = st.file_uploader("② 플로우에서 받은 파일들을 한꺼번에 올리기 — 올린 뒤 그림을 보고 컷 번호만 골라 주세요",
                                type=["png", "jpg", "jpeg", "webp", "mp4", "mov"],
                                accept_multiple_files=True, key="bulk_up")
