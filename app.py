@@ -113,7 +113,8 @@ def channels():
 
 
 def projects():
-    return sorted([p for p in config.PROJECTS.iterdir() if (p / "script.json").exists()], reverse=True)
+    return sorted([p for p in config.PROJECTS.iterdir() if (p / "script.json").exists() and not p.name.startswith("_")],
+                  reverse=True)
 
 
 def load_script(p):
@@ -370,6 +371,19 @@ if page == "② 재료 만들기":
         st.info("먼저 ① 탭에서 대본을 저장하세요.")
     else:
         p = st.selectbox("프로젝트", ps, format_func=lambda x: x.name, key="p2")
+        with st.expander("🗑 이 프로젝트 취소(지우기)"):
+            st.caption("지운 프로젝트는 projects/_지운프로젝트 폴더로 옮겨져요. 실수로 지웠으면 거기서 다시 꺼내면 돼요.")
+            if st.checkbox(f"'{p.name}' 프로젝트를 정말 지울게요", key=f"del_ok_{p.name}"):
+                if st.button("🗑 프로젝트 지우기", type="primary", key="del_proj"):
+                    import shutil
+                    trash = config.PROJECTS / "_지운프로젝트"
+                    trash.mkdir(exist_ok=True)
+                    dest = trash / p.name
+                    if dest.exists():
+                        shutil.rmtree(dest)
+                    shutil.move(str(p), str(dest))
+                    st.success("지웠어요.")
+                    st.rerun()
         data = load_script(p)
         fmt = data.get("format", "shorts")
         aspect = "16:9" if fmt == "longform" else "9:16"
