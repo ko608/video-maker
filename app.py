@@ -43,6 +43,30 @@ def _small(path_str, mtime, width=360):
     return b.getvalue()
 
 
+@st.cache_data(show_spinner=False, max_entries=800)
+def _img_sig(name, size, data):
+    """그림 지문: 작은 흑백 모양(dHash) + 색 분포"""
+    from PIL import Image as _I
+    import io
+    im = _I.open(io.BytesIO(data)).convert("RGB")
+    g = im.convert("L").resize((17, 16))
+    px = list(g.getdata())
+    bits = [px[r * 17 + c] > px[r * 17 + c + 1] for r in range(16) for c in range(16)]
+    small = im.resize((8, 8))
+    col = [v // 32 for p_ in small.getdata() for v in p_]
+    return bits, col, im.size[0] / max(1, im.size[1])
+
+
+def _similar(a, b):
+    bits_a, col_a, r_a = a
+    bits_b, col_b, r_b = b
+    if abs(r_a - r_b) > 0.05:
+        return False
+    ham = sum(x != y for x, y in zip(bits_a, bits_b))          # 256비트 중 다른 칸 수
+    cdiff = sum(abs(x - y) for x, y in zip(col_a, col_b)) / len(col_a)
+    return ham < 70 and cdiff < 0.9
+
+
 @st.cache_data(show_spinner=False, max_entries=400)
 def _upload_thumb(name, size, data):
     from PIL import Image as _I
@@ -523,6 +547,7 @@ if page == "② 재료 만들기":
         ups = st.file_uploader("② 플로우에서 받은 파일들을 한꺼번에 올리기 — 올린 뒤 그림을 보고 컷 번호만 골라 주세요",
                                type=["png", "jpg", "jpeg", "webp", "mp4", "mov"],
                                accept_multiple_files=True, key="bulk_up")
+        dedup = st.checkbox("같은 장면이 2장씩 나왔으면 한 장만 쓰기 (비슷한 그림은 자동으로 빼기)", value=True, key="dedup")
         if ups:
             def _save(u, no):
                 if isinstance(no, str) and no.endswith("-시작"):   # 대사 컷의 시작 그림
@@ -560,6 +585,18 @@ if page == "② 재료 만들기":
                         plan0.append(img_slots[ii] if ii < len(img_slots) else "넣지 않음"); ii += 1
                 # 그림은 AI가 직접 보고 장면 설명과 맞는 자리에 넣기 (플로우 파일 순서가 뒤죽박죽이어도 OK)
                 pic_idx = [k for k, u in enumerate(ups) if Path(u.name).suffix.lower() not in (".mp4", ".mov")]
+                if dedup and len(pic_idx) > 1:
+                    # 비슷한 그림(같은 문구로 2장 나온 것) 찾기 → 한 장만 남김
+                    keep, dropped = [], 0
+                    sigs = {k: _img_sig(ups[k].name, ups[k].size, ups[k].getvalue()) for k in pic_idx}
+                    for k in pic_idx:
+                        if any(_similar(sigs[k], sigs[j]) for j in keep):
+                            plan0[k] = "넣지 않음"; dropped += 1
+                        else:
+                            keep.append(k)
+                    pic_idx = keep
+                    if dropped:
+                        st.info(f"비슷한 그림 {dropped}장을 빼고 {len(keep)}장으로 자리를 맞췄어요. (빠진 그림은 아래 목록에서 '넣지 않음'으로 보여요)")
                 if pic_idx and img_slots and cfg.get("anthropic_api_key"):
                     desc = {}
                     for c in data["cuts"]:
