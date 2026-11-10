@@ -148,16 +148,16 @@ def cut_file(p, no):
 LOOK_EN = ("All people look about 5 to 10 years younger than their stated age, good-looking but natural, neat and tidy: "
            "clean well-groomed hair, smooth clear skin, fresh clean well-fitting clothes with no stains or wrinkles. "
            "The face and its emotion are the subject: frame tightly so the face fills most of the picture; "
-           "the background barely shows — just a soft blurred wash of color hinting at the place, no detailed scenery, "
+           "the background is real but softly out of focus (shallow depth of field), bright, clean and simple, "
            "while the people stay crisp and sharp")
 LOOK_KO = ("인물은 설정 나이보다 5~10살 젊어 보이게, 단정하고 깔끔하게(정돈된 머리, 맑은 피부, 얼룩·구김 없는 깨끗한 옷). "
-           "주인공은 얼굴 표정과 감정 — 얼굴이 화면 대부분을 채우게 가깝게, 배경은 거의 안 보여도 됨(장소를 짐작할 정도의 흐릿하고 단순한 색감만, 자세한 배경 그리지 말 것), 인물만 또렷하게")
+           "주인공은 얼굴 표정과 감정 — 얼굴이 화면 대부분을 채우게 가깝게, 배경은 밝고 깨끗하게, 카메라 초점이 인물에 맞아 뒤는 부드럽게 흐려진 느낌(그림처럼 뭉개지 말 것), 인물만 또렷하게")
 ART_STYLES = {
     "반실사 일러스트": ("Realistic semi-real style, about 75 percent realistic: real human facial structure and proportions, "
-                  "realistic eyes, nose and skin, rendered as a polished digital painting, NOT a photograph — skin, clothes and background "
-                  "are smoothly painted and simplified. NOT anime, NOT cartoon, NOT webtoon, no big anime eyes, no outlines; "
+                  "realistic eyes, nose and skin, like a bright, polished Korean TV drama still with a light beauty retouch — realistic but clean: skin, clothes and background "
+                  "are smooth and tidy, not painterly, no brush strokes. NOT anime, NOT cartoon, NOT webtoon, no big anime eyes, no outlines; "
                   "the person is crisp and sharp with good contrast, background evenly lit — no glow, no bloom, no haze",
-                  "사진이 아닌 고급 디지털 페인팅 반실사(얼굴 생김새·비율은 실제 사람처럼, 피부·옷·배경은 붓으로 매끈하게 다듬은 그림 느낌 — 실사 사진처럼 보이면 안 됨), "
+                  "밝고 깨끗한 한국 TV 드라마 장면 같은 반실사(얼굴·피부는 실제 사람처럼 자연스럽게, 가벼운 뽀샵 보정으로 매끈하고 깔끔하게 — 붓 그림·일러스트 느낌 금지, 거칠고 칙칙한 실사 사진도 금지), "
                   "애니메이션·만화·웹툰 느낌 금지, 인물은 윤곽이 또렷하고 선명하게, 배경 빛 번짐·뿌연 느낌 없이"),
     "깔끔한 드라마 사진풍": ("Clean polished Korean TV drama still photo: smooth even skin, no grit, no film grain, tidy simple background",
                      "깔끔한 드라마 사진풍(매끈한 피부, 거친 질감·지저분한 배경 없이)"),
