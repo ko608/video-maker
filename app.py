@@ -342,20 +342,21 @@ if page == "① 분석·대본":
     k1, k2 = st.columns([3, 1])
     kw = k1.text_input("💡 한 단어만 넣어도 주제를 뽑아 드려요", placeholder="예: 국밥, 보험, 반찬, 진상, 김장")
     k2.write(""); k2.write("")
-    if k2.button("주제 뽑기", width="stretch"):
+    if k2.button("주제 뽑기 (누를 때마다 새 6개)", width="stretch"):
         try:
             with st.spinner("주제 후보 만드는 중…"):
-                st.session_state["ideas"] = ai.suggest_topics(cfg, ch, kw)
+                done_ = [x.name.split("_", 2)[-1] for x in projects()][:40]     # 이미 만든 이야기 제목은 피하기
+                st.session_state["ideas"] = ai.suggest_topics(cfg, ch, kw, avoid=done_)
         except Exception as e:
             st.error(f"오류: {e}")
     ideas = st.session_state.get("ideas") or []
     if ideas:
         pick = st.radio("마음에 드는 주제를 고르세요 (고르면 아래 '주제·메모' 칸에 들어가요)",
-                        ["(고르지 않음)"] + [f"{i['title']} — {i['twist']}" for i in ideas], key="idea_pick")
+                        ["(고르지 않음)"] + [f"[{i.get('frame','')}] {i['title']} — {i['twist']} → {i.get('ending','')}" for i in ideas], key="idea_pick")
         if pick != "(고르지 않음)" and st.session_state.get("_last_pick") != pick:
             st.session_state["_last_pick"] = pick
-            it = ideas[[f"{i['title']} — {i['twist']}" for i in ideas].index(pick)]
-            st.session_state["topic_box"] = f"{it['title']}. 반전: {it['twist']}"
+            it = ideas[[f"[{i.get('frame','')}] {i['title']} — {i['twist']} → {i.get('ending','')}" for i in ideas].index(pick)]
+            st.session_state["topic_box"] = f"{it['title']}. 반전: {it['twist']}. 결말: {it.get('ending','')}"
     topic = st.text_area("주제·메모 (선택) — 예전에 만든 이야기 줄거리를 통째로 붙여 넣어도 돼요 (롱폼으로 키워 줘요)",
                          placeholder="예: 시어머니가 며느리 몰래 들어 둔 보험. / 또는 붕어빵 시리즈 줄거리 전체",
                          height=160, key="topic_box")
