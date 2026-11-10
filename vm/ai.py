@@ -10,7 +10,7 @@ def _gclient(cfg):
         raise RuntimeError("설정에서 구글 AI Studio 키를 넣어 주세요.")
     from google.genai import types
     # 구글 프로그램 새 버전은 기본 주소(v1)가 바뀌어 목소리 설정(speechConfig)을 못 씀 → v1beta로 고정
-    return genai.Client(api_key=cfg["google_api_key"], http_options=types.HttpOptions(api_version="v1beta"))
+    return genai.Client(api_key=cfg["google_api_key"], http_options=types.HttpOptions(api_version="v1beta", timeout=120_000))  # 2분 넘게 대답 없으면 멈추지 말고 다음으로
 
 
 def _claude(cfg, prompt, max_tokens=8000):

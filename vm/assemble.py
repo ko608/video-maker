@@ -146,7 +146,7 @@ def build_segment(work: Path, idx, cut, cfg, log=print):
         if audio:
             dur = max(vdur, wav_seconds(audio) + 0.3)
     else:
-        dur = (wav_seconds(audio) + 0.5) if audio else 4.0
+        dur = (wav_seconds(audio) + 0.5) if audio else max(4.0, len(cut.get("text", "")) / 7)   # 목소리 없으면 자막 읽을 시간만큼
 
     # 자막 PNG (문장을 나눠 시간 비율대로)
     chunks = split_chunks(cut.get("text", ""), int(cfg.get("subtitle_chars", 13)))

@@ -1078,6 +1078,7 @@ if page == "③ 완성 영상":
                 # 나레이션 목소리를 4개씩 동시에 미리 만들기
                 from concurrent.futures import ThreadPoolExecutor, as_completed
                 (p / "work").mkdir(exist_ok=True)
+                tts_fail = []
                 need = [c for c in data["cuts"] if c["kind"] == "image" and c.get("narration")
                         and not (own_voice and list((p / "재료").glob(f"{int(c['no']):02d}_나레이션.*")))
                         and not (p / "work" / f"v_{cfg.get('tts_voice','Kore')}_{int(c['no']):02d}.wav").exists()]
@@ -1088,7 +1089,11 @@ if page == "③ 완성 영상":
                         k = 0
                         for fu in as_completed(futs):
                             k += 1
-                            fu.result(); log(f"  ✔ 목소리 {futs[fu]} ({k}/{len(need)})")
+                            try:
+                                fu.result(); log(f"  ✔ 목소리 {futs[fu]} ({k}/{len(need)})")
+                            except Exception as e_:
+                                tts_fail.append(futs[fu])
+                                log(f"  ⚠ 컷 {futs[fu]} 목소리를 못 만들었어요 — 자막만 넣고 계속해요 ({str(e_)[:120]})")
                 cuts = []
                 for c in data["cuts"]:
                     no = int(c["no"])
@@ -1104,10 +1109,7 @@ if page == "③ 완성 영상":
                         else:
                             wav = p / "work" / f"v_{cfg.get('tts_voice','Kore')}_{no:02d}.wav"
                             (p / "work").mkdir(exist_ok=True)
-                            if not wav.exists():
-                                log(f"컷 {no}: 나레이션 목소리 만드는 중")
-                                ai.make_tts(cfg, c["narration"], wav)
-                            audio = wav
+                            audio = wav if wav.exists() else None
                     cuts.append(dict(media=media, audio=audio, text=c.get("line") or c.get("narration", ""),
                                      extras=[str(x) for x in extra_files(p, no)] if c["kind"] == "image" else []))
                 assemble.set_format(fmt)
