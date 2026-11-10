@@ -153,8 +153,8 @@ LOOK_KO = ("인물은 설정 나이보다 5~10살 젊어 보이게, 단정하고
            "배경은 사진처럼 사실적이지 않게 — 단순하고 부드러운 그림 느낌으로 깔끔하게, 인물만 또렷하게")
 ART_STYLES = {
     "반실사 일러스트": ("Realistic semi-real style, about 75 percent realistic: real human facial structure and proportions, "
-                  "realistic eyes, nose and skin, like a high-end retouched portrait or a realistic 3D render — only the skin, light and background "
-                  "are softened and cleaned up. NOT anime, NOT cartoon, NOT webtoon, no big anime eyes, no outlines; "
+                  "realistic eyes, nose and skin, rendered as a polished digital painting, NOT a photograph — skin, clothes and background "
+                  "are smoothly painted and simplified. NOT anime, NOT cartoon, NOT webtoon, no big anime eyes, no outlines; "
                   "the person is crisp and sharp with good contrast, background evenly lit — no glow, no bloom, no haze",
                   "사진이 아닌 고급 디지털 페인팅 반실사(얼굴 생김새·비율은 실제 사람처럼, 피부·옷·배경은 붓으로 매끈하게 다듬은 그림 느낌 — 실사 사진처럼 보이면 안 됨), "
                   "애니메이션·만화·웹툰 느낌 금지, 인물은 윤곽이 또렷하고 선명하게, 배경 빛 번짐·뿌연 느낌 없이"),
