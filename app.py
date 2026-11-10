@@ -71,7 +71,7 @@ def _similar(a, b):
 def _upload_thumb(name, size, data):
     from PIL import Image as _I
     import io
-    im = _I.open(io.BytesIO(data)).convert("RGB"); im.thumbnail((200, 360))
+    im = _I.open(io.BytesIO(data)).convert("RGB"); im.thumbnail((140, 250))
     b = io.BytesIO(); im.save(b, "JPEG", quality=70)
     return b.getvalue()
 
@@ -911,7 +911,8 @@ if page == "② 재료 만들기":
                         st.session_state["_click_pos"] = 0; st.session_state["_click_used"] = []; st.rerun()
                 else:
                     sl, vis, nar = order_[pos]
-                    st.markdown(f"### 지금 자리: **{sl}** ({pos + 1}/{len(order_)})")
+                    _sn = seq_no(data, sl) if data.get("naming") == "seq" else None
+                    st.markdown(f"### 지금 자리: **{('c%02d · 컷 ' % _sn) if _sn else ''}{sl}** ({pos + 1}/{len(order_)})")
                     st.caption(f"나레이션: {nar[:120]}…")
                     st.caption(f"장면: {vis[:200]}")
                     b1, b2 = st.columns(2)
@@ -919,12 +920,12 @@ if page == "② 재료 만들기":
                         st.session_state["_click_pos"] = pos + 1; st.rerun()
                     if b2.button("⏮ 한 칸 뒤로", key="click_back", disabled=pos == 0):
                         st.session_state["_click_pos"] = max(0, pos - 1); st.rerun()
-                    gc = st.columns(6)
+                    gc = st.columns(8)
                     shown = 0
                     for k, u in enumerate(ups):
                         if Path(u.name).suffix.lower() in (".mp4", ".mov") or u.name in used_:
                             continue
-                        box = gc[shown % 6]; shown += 1
+                        box = gc[shown % 8]; shown += 1
                         try:
                             box.image(_upload_thumb(u.name, u.size, u.getvalue()), width="stretch")
                         except Exception:
@@ -934,10 +935,27 @@ if page == "② 재료 만들기":
                             st.session_state["_click_used"] = list(used_ | {u.name})
                             st.session_state["_click_pos"] = pos + 1
                             st.rerun()
-            grid = st.expander(f"올린 파일 {len(ups)}개와 들어간 자리 보기·바꾸기", expanded=len(ups) <= 24)
-            cols = grid.columns(6 if len(ups) > 24 else 4)
-            for k, u in enumerate(ups):
-                box = cols[k % len(cols)]
+            vids_set_ = {int(c["no"]) for c in data["cuts"] if c["kind"] == "video"}
+            def slot_label(x):
+                if x == "넣지 않음":
+                    return "넣지 않음"
+                if isinstance(x, str) and x.endswith("-시작"):
+                    return f"v{int(x.split('-')[0]):02d} 첫 장면 그림"
+                if isinstance(x, int) and x in vids_set_:
+                    return f"v{x:02d} 대사 영상"
+                n_ = seq_no(data, x) if data.get("naming") == "seq" else None
+                return f"c{n_:02d}  (컷 {x})" if n_ else f"컷 {x}"
+            def _ord(k):      # 그림 번호 순서대로 보여 주기
+                x = plan0[k] if k < len(plan0) else "넣지 않음"
+                if x == "넣지 않음":
+                    return (2, 0)
+                n_ = seq_no(data, x)
+                return (0, n_) if n_ else (1, int(str(x).split("-")[0]))
+            grid = st.expander(f"올린 파일 {len(ups)}개와 들어간 자리 보기·바꾸기 (그림 번호 순서)", expanded=True)
+            cols = grid.columns(8)
+            for i_, k in enumerate(sorted(range(len(ups)), key=_ord)):
+                u = ups[k]
+                box = cols[i_ % len(cols)]
                 if Path(u.name).suffix.lower() in (".mp4", ".mov"):
                     box.markdown(f"🎬 **영상**  \n{u.name[:18]}")
                 else:
@@ -947,7 +965,7 @@ if page == "② 재료 만들기":
                         box.write(u.name[:18])
                 g = plan0[k] if k < len(plan0) and plan0[k] in all_nos else "넣지 않음"
                 plan[k] = box.selectbox("컷", all_nos, index=all_nos.index(g), key=f"assign_{k}_{u.name}",
-                                        label_visibility="collapsed")
+                                        label_visibility="collapsed", format_func=slot_label)
             if st.button("🤖 AI로 처음부터 다시 맞추기 (이번에 올린 파일이 들어간 자리를 비우고 다시)"):
                 for no in st.session_state.get("_bulk_plan", []):
                     if no == "넣지 않음":
