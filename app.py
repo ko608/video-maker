@@ -156,7 +156,7 @@ ART_STYLES = {
                   "realistic eyes, nose and skin, like a high-end retouched portrait or a realistic 3D render — only the skin, light and background "
                   "are softened and cleaned up. NOT anime, NOT cartoon, NOT webtoon, no big anime eyes, no outlines; "
                   "the person is crisp and sharp with good contrast, background evenly lit — no glow, no bloom, no haze",
-                  "실사에 가까운 반실사(얼굴 생김새·눈·코·피부는 실제 사람처럼 사실적으로, 피부결·조명·배경만 깔끔하게 다듬은 고급 보정 사진 느낌), "
+                  "사진이 아닌 고급 디지털 페인팅 반실사(얼굴 생김새·비율은 실제 사람처럼, 피부·옷·배경은 붓으로 매끈하게 다듬은 그림 느낌 — 실사 사진처럼 보이면 안 됨), "
                   "애니메이션·만화·웹툰 느낌 금지, 인물은 윤곽이 또렷하고 선명하게, 배경 빛 번짐·뿌연 느낌 없이"),
     "깔끔한 드라마 사진풍": ("Clean polished Korean TV drama still photo: smooth even skin, no grit, no film grain, tidy simple background",
                      "깔끔한 드라마 사진풍(매끈한 피부, 거친 질감·지저분한 배경 없이)"),
