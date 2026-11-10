@@ -1083,17 +1083,22 @@ if page == "③ 완성 영상":
                         and not (own_voice and list((p / "재료").glob(f"{int(c['no']):02d}_나레이션.*")))
                         and not (p / "work" / f"v_{cfg.get('tts_voice','Kore')}_{int(c['no']):02d}.wav").exists()]
                 if need:
-                    log(f"나레이션 목소리 {len(need)}개를 하나씩 만드는 중… (한 개에 보통 10~40초)")
-                    with ThreadPoolExecutor(max_workers=1) as pool:   # 구글 목소리는 동시에 여러 개 보내면 '1분 한도'에 걸려 오래 쉬어요
-                        futs = {pool.submit(ai.make_tts, cfg, c["narration"], p / "work" / f"v_{cfg.get('tts_voice','Kore')}_{int(c['no']):02d}.wav"): c["no"] for c in need}
-                        k = 0
-                        for fu in as_completed(futs):
-                            k += 1
-                            try:
-                                fu.result(); log(f"  ✔ 목소리 {futs[fu]} ({k}/{len(need)})")
-                            except Exception as e_:
-                                tts_fail.append(futs[fu])
-                                log(f"  ⚠ 컷 {futs[fu]} 목소리를 못 만들었어요 — 자막만 넣고 계속해요 ({str(e_)[:120]})")
+                    log(f"나레이션 목소리 {len(need)}개를 하나씩 만드는 중… (한 개에 보통 10~40초, 길어도 2분 반이면 넘어가요)")
+                    import concurrent.futures as _cf
+                    pool = ThreadPoolExecutor(max_workers=len(need))
+                    for k, c in enumerate(need, 1):
+                        wav = p / "work" / f"v_{cfg.get('tts_voice','Kore')}_{int(c['no']):02d}.wav"
+                        fu = pool.submit(ai.make_tts, cfg, c["narration"], wav)
+                        try:
+                            fu.result(timeout=150)
+                            log(f"  ✔ 목소리 {c['no']} ({k}/{len(need)})")
+                        except _cf.TimeoutError:
+                            tts_fail.append(c["no"])
+                            log(f"  ⚠ 컷 {c['no']} 목소리: 구글이 2분 반 넘게 대답이 없어 건너뛰어요 — 자막만 넣고 계속해요")
+                        except Exception as e_:
+                            tts_fail.append(c["no"])
+                            log(f"  ⚠ 컷 {c['no']} 목소리를 못 만들었어요 — 자막만 넣고 계속해요 ({str(e_)[:200]})")
+                    pool.shutdown(wait=False, cancel_futures=True)
                 cuts = []
                 for c in data["cuts"]:
                     no = int(c["no"])
