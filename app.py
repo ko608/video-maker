@@ -95,7 +95,7 @@ def new_upload(key, up):
 def slot_from_name(name):
     """파일 이름에서 자리 읽기: c02 → 2, c02-2 / c02_2 → '2-2', v03 → 영상 3 (못 찾으면 None)"""
     import re as _re
-    m = _re.search(r"(?<![a-z0-9])([cv])[_\- ]?(\d{1,3})(?:[_\- ](\d))?(?![0-9])", Path(name).stem.lower())
+    m = _re.search(r"(?<![a-z0-9])([cv])[_\- ]?(\d{1,3})(?:[_\- ](\d)(?![0-9a-z]))?(?![0-9])", Path(name).stem.lower())   # 뒤에 붙는 플로우 임의 글자(c05_3d69…)는 무시
     if not m:
         return None
     no = int(m.group(2))
