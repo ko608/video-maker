@@ -104,6 +104,42 @@ def slot_from_name(name):
     return f"{no}-{m.group(3)}" if m.group(3) and m.group(3) in ("2", "3") else no
 
 
+def seq_slots(data):
+    """그림 자리를 차례대로: [ '2', '2-2', '2-3', '4', … ] → 그림 번호 c01, c02, c03, c04 …"""
+    out = []
+    for c in data.get("cuts", []):
+        if c["kind"] != "image":
+            continue
+        n_ = int(c["no"])
+        out.append(str(n_))
+        out += [f"{n_}-{k_}" for k_ in range(2, 2 + len(c.get("shots") or []))]
+    return out
+
+
+def seq_no(data, slot):
+    """자리('4-2') → 그림 번호(5) — 차례 번호 방식일 때만"""
+    try:
+        return seq_slots(data).index(str(slot)) + 1
+    except ValueError:
+        return None
+
+
+def slot_of(name, data):
+    """파일 이름 → 자리. 차례 번호 방식(c01, c02 …)이면 번호를 자리로 바꿔 줌"""
+    sl = slot_from_name(name)
+    if sl is None or data.get("naming") != "seq":
+        return sl
+    import re as _re
+    m_ = _re.search(r"(?<![a-z0-9])([cv])[_\- ]?\d", Path(name).stem.lower())
+    if isinstance(sl, int) and m_ and m_.group(1) == "c":
+        lst = seq_slots(data)
+        if 1 <= sl <= len(lst):
+            v = lst[sl - 1]
+            return int(v) if "-" not in v else v
+        return None
+    return sl
+
+
 def channels():
     out = {}
     for f in sorted(config.CHANNELS.glob("*.json")):
@@ -641,17 +677,25 @@ if page == "② 재료 만들기":
                      f"{ratio_ko}, 영상 길이는 번호마다 적힌 초, 말하는 사람 얼굴을 아주 가깝게(눈동자까지), 다른 사람은 말하지 않음, 밝게, 자막 없이.", ""]
         only_missing = st.checkbox("그림이 아직 없는 컷만 문구에 넣기 (늘린 새 장면만 만들 때)",
                                    value=any(c.get("new") for c in data["cuts"]), key="flow_only_missing")
+        # 새 프로젝트(아직 그림 없음)는 그림 번호를 c01, c02, c03 … 차례대로 매김 (플로우가 번호를 당겨 붙여도 맞게)
+        if not data.get("naming") and not any(x for x in (p / "재료").glob("*") if x.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp") and "기준" not in x.name):
+            data["naming"] = "seq"; save_script(p, data)
+        seqm = data.get("naming") == "seq"
+        if seqm:
+            lines_all[0] = "아래 그림들을 순서대로 만들어 줘. 각 그림의 이름(제목)은 줄 맨 앞 [ ] 안의 이름 그대로 지어 줘 (c01, c02, c03 … 차례대로)."
         for c in data["cuts"]:
             if only_missing and cut_file(p, int(c["no"])):
                 continue
             if c["kind"] == "video":
                 vid_lines.append(f"[v{int(c['no']):02d}] {ai.video_seconds_for(c.get('line'))}초 영상, {c.get('speaker_en') or c.get('speaker','')} 말함: \"{c['line']}\" / 장면: {c['visual']}")
             else:
-                lines_all.append(f"[c{int(c['no']):02d}] {c['visual']}")
+                tagf = (lambda sl_: f"c{seq_no(data, sl_):02d}") if seqm else (lambda sl_: f"c{int(str(sl_).split('-')[0]):02d}" + (f"-{str(sl_).split('-')[1]}" if "-" in str(sl_) else ""))
+                lines_all.append(f"[{tagf(int(c['no']))}] {c['visual']}")
                 for k_, v_ in enumerate(c.get("shots") or [], 2):
-                    lines_all.append(f"[c{int(c['no']):02d}-{k_}] {v_}")
+                    sk_ = f"{int(c['no'])}-{k_}"
+                    lines_all.append(f"[{tagf(sk_)}] {v_}")
         lines_all = [soften(x) for x in lines_all]
-        st.text_area("① 그림 전체 문구 (그림 컷만 — 2, 2-2, 2-3, 4 … 순서) — 복사해서 플로우 채팅창에 한 번에",
+        st.text_area("① 그림 전체 문구 (그림 번호 c01, c02 … 차례대로) — 복사해서 플로우 채팅창에 한 번에" if seqm else "① 그림 전체 문구 (그림 컷만 — 2, 2-2, 2-3, 4 … 순서) — 복사해서 플로우 채팅창에 한 번에",
                      "\n".join(lines_all), height=220, key="flow_all")
         if len(vid_lines) > 2:
             st.text_area("②-1 대사 영상 문구 한 번에 — ①의 그림이 다 나온 뒤, 같은 채팅창에 이어서 붙여 넣기",
@@ -699,7 +743,7 @@ if page == "② 재료 만들기":
                         st.warning("그림 수와 자리 수가 달라요. 받은 그림이 빠졌거나 더 있는지 확인하세요 (남는 쪽은 안 넣어요).")
                     by_name = {}
                     for f in files_:        # 같은 자리 2장이면 먼저 받은 것만
-                        sl_ = slot_from_name(f.name)
+                        sl_ = slot_of(f.name, data)
                         if sl_ is not None and str(sl_) not in by_name:
                             by_name[str(sl_)] = f
                     if by_name:
@@ -770,7 +814,7 @@ if page == "② 재료 만들기":
                 vid_nos_ = {int(c["no"]) for c in data["cuts"] if c["kind"] == "video"}
                 seen_ = set()
                 for k, u in enumerate(ups):
-                    sl = slot_from_name(u.name)
+                    sl = slot_of(u.name, data)
                     if sl is None:
                         continue
                     is_img_ = Path(u.name).suffix.lower() not in (".mp4", ".mov")
@@ -784,7 +828,7 @@ if page == "② 재료 만들기":
                     st.info(f"파일 이름으로 {named}개 자리를 찾았어요." + (f" 같은 자리에 2장 이상인 {dup_}장은 빼 두었어요(아래 목록에서 바꿀 수 있어요)." if dup_ else ""))
                 # ② 이름이 없는 그림만 AI가 보고 맞추기
                 pic_idx = [k for k, u in enumerate(ups) if Path(u.name).suffix.lower() not in (".mp4", ".mov")
-                           and slot_from_name(u.name) is None]
+                           and slot_of(u.name, data) is None]
                 if dedup and len(pic_idx) > 1:
                     # 비슷한 그림(같은 문구로 2장 나온 것) 찾기 → 한 장만 남김
                     keep, dropped = [], 0
@@ -930,6 +974,11 @@ if page == "② 재료 만들기":
             f = cut_file(p, no)
             l, m, r = st.columns([2, 3, 2])
             l.markdown(f"### 컷 {no} · {'🎥 대사 영상' if c['kind']=='video' else '🖼️ 이미지+나레이션'}")
+            if c["kind"] == "image" and data.get("naming") == "seq":
+                nums_ = [seq_no(data, no)] + [seq_no(data, f"{no}-{k_}") for k_ in range(2, 2 + len(c.get("shots") or []))]
+                l.markdown("**🔢 그림 번호:** " + " · ".join(f"`c{n_:02d}`" for n_ in nums_ if n_))
+            elif c["kind"] == "video":
+                l.markdown(f"**🔢 영상 번호:** `v{no:02d}`")
             if c.get("chapter"):
                 l.markdown(f"**📖 {c['chapter']}**")
             l.write(c.get("line") or c.get("narration", ""))
@@ -940,8 +989,9 @@ if page == "② 재료 만들기":
                         "다른 사람은 말하지 않음. 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷), 상대는 뒤에 흐리게. "
                         f"시작 그림과 같은 그림체({art_style(cfg)[1].split('(')[0]}), 밝고 환한 분위기, 자막 없이.")
             else:
-                flow = (f"[컷 {no} 장면] {c['visual']}"
-                        + "".join(f"\n[컷 {no}-{k_} 장면] {v_}" for k_, v_ in enumerate(c.get("shots") or [], 2))
+                _t = (lambda sl_: f"c{seq_no(data, sl_):02d}") if data.get("naming") == "seq" else (lambda sl_: f"컷 {sl_} 장면")
+                flow = (f"[{_t(no)}] {c['visual']}"
+                        + "".join(f"\n[{_t(f'{no}-{k_}')}] {v_}" for k_, v_ in enumerate(c.get("shots") or [], 2))
                         + f"\n[공통] {ratio_ko}, {art_style(cfg)[1]}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로 "
                         "(더 부유하거나 현대식으로 바꾸지 말 것), 정지 그림은 음식 클로즈업이나 인물 얼굴 클로즈업(멀리서 형체만 보이는 장면 금지), 인물은 옛날 이야기라도 단정하고 깔끔하게, 얼굴은 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷하게 보여 감정이 읽히게), 두 사람이면 한 사람 얼굴을 크게 앞에·상대는 뒤에 작고 흐리게, 주변은 흐리고 단순하게(지저분한 물건 없이), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, 자연스러운 피부). "
                         + f"등장인물: {data.get('characters','')}")
