@@ -147,10 +147,11 @@ def cut_file(p, no):
 
 LOOK_EN = ("All people look about 5 to 10 years younger than their stated age, good-looking but natural, neat and tidy: "
            "clean well-groomed hair, smooth clear skin, fresh clean well-fitting clothes with no stains or wrinkles. "
-           "Backgrounds are simplified and softly painted, illustration-like rather than photographic, clean and uncluttered, "
+           "The face and its emotion are the subject: frame tightly so the face fills most of the picture; "
+           "the background barely shows — just a soft blurred wash of color hinting at the place, no detailed scenery, "
            "while the people stay crisp and sharp")
 LOOK_KO = ("인물은 설정 나이보다 5~10살 젊어 보이게, 단정하고 깔끔하게(정돈된 머리, 맑은 피부, 얼룩·구김 없는 깨끗한 옷). "
-           "배경은 사진처럼 사실적이지 않게 — 단순하고 부드러운 그림 느낌으로 깔끔하게, 인물만 또렷하게")
+           "주인공은 얼굴 표정과 감정 — 얼굴이 화면 대부분을 채우게 가깝게, 배경은 거의 안 보여도 됨(장소를 짐작할 정도의 흐릿하고 단순한 색감만, 자세한 배경 그리지 말 것), 인물만 또렷하게")
 ART_STYLES = {
     "반실사 일러스트": ("Realistic semi-real style, about 75 percent realistic: real human facial structure and proportions, "
                   "realistic eyes, nose and skin, rendered as a polished digital painting, NOT a photograph — skin, clothes and background "
