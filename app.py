@@ -181,12 +181,14 @@ def cut_file(p, no):
     return None
 
 
-LOOK_EN = ("All people look about 5 to 10 years younger than their stated age, good-looking but natural, neat and tidy: "
+LOOK_EN = ("Each person wears clothes in one vivid, eye-catching signature color that differs from the others (e.g. bright pink, vivid blue, sunny yellow, fresh green — never dull grey, beige or black), the same outfit in every scene. "
+           "All people look about 5 to 10 years younger than their stated age, good-looking but natural, neat and tidy: "
            "clean well-groomed hair, smooth clear skin, fresh clean well-fitting clothes with no stains or wrinkles. "
            "The face and its emotion are the subject: frame tightly so the face fills most of the picture; "
            "the background is real but softly out of focus (shallow depth of field), bright, clean and simple, "
            "while the people stay crisp and sharp")
-LOOK_KO = ("인물은 설정 나이보다 5~10살 젊어 보이게, 단정하고 깔끔하게(정돈된 머리, 맑은 피부, 얼룩·구김 없는 깨끗한 옷). "
+LOOK_KO = ("인물마다 서로 다른 또렷하고 선명한 대표 색 옷(진분홍·쨍한 파랑·노랑·초록 등, 회색·베이지·검정 같은 흐린 색 금지)을 장면마다 똑같이. "
+           "인물은 설정 나이보다 5~10살 젊어 보이게, 단정하고 깔끔하게(정돈된 머리, 맑은 피부, 얼룩·구김 없는 깨끗한 옷). "
            "주인공은 얼굴 표정과 감정 — 얼굴이 화면 대부분을 채우게 가깝게, 배경은 밝고 깨끗하게, 카메라 초점이 인물에 맞아 뒤는 부드럽게 흐려진 느낌(그림처럼 뭉개지 말 것), 인물만 또렷하게")
 ART_STYLES = {
     "반실사 일러스트": ("Realistic semi-real style, about 75 percent realistic: real human facial structure and proportions, "
