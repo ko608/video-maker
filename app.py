@@ -697,20 +697,30 @@ if page == "② 재료 만들기":
                             pass
                     if len(files_) != len(slots_):
                         st.warning("그림 수와 자리 수가 달라요. 받은 그림이 빠졌거나 더 있는지 확인하세요 (남는 쪽은 안 넣어요).")
-                    by_name = {str(slot_from_name(f.name)): f for f in files_ if slot_from_name(f.name) is not None}
+                    by_name = {}
+                    for f in files_:        # 같은 자리 2장이면 먼저 받은 것만
+                        sl_ = slot_from_name(f.name)
+                        if sl_ is not None and str(sl_) not in by_name:
+                            by_name[str(sl_)] = f
                     if by_name:
                         st.info(f"파일 이름(c02, c02-2 …)으로 {len(by_name)}장의 자리를 찾았어요 → 이름대로 넣어요.")
                     if st.button("📥 그림 자리에 넣기 (이름이 있으면 이름대로, 없으면 받은 순서대로)", type="primary"):
                         pairs_ = list(by_name.items()) if by_name else list(zip(slots_, files_))
                         pairs_ = [(f, sl) for sl, f in pairs_] if by_name else [(f, sl) for sl, f in pairs_]
                         for f, sl in pairs_:
+                            vids_ = {int(c["no"]) for c in data["cuts"] if c["kind"] == "video"}
                             if "-" in sl:
-                                n_, sub_ = sl.split("-"); stem = f"{int(n_):02d}_{EXTRA[int(sub_) - 2]}"
+                                n_, sub_ = sl.split("-")
+                                if int(sub_) not in (2, 3):
+                                    continue
+                                stem = f"{int(n_):02d}_{EXTRA[int(sub_) - 2]}"
+                            elif int(sl) in vids_:
+                                stem = f"{int(sl):02d}_첫장면"      # 대사 영상 컷의 그림 = 첫 장면 그림
                             else:
                                 stem = f"{int(sl):02d}"
                             for old in (p / "재료").glob(f"{stem}.*"):
                                 old.unlink()
-                            (p / "재료" / f"{stem}{f.suffix.lower()}").write_bytes(f.read_bytes())
+                            (p / "재료" / f"{stem}{'.png' if stem.endswith('_첫장면') else f.suffix.lower()}").write_bytes(f.read_bytes())
                         cfg["import_dir"] = str(folder); config.save(cfg)
                         st.success(f"{min(len(files_), len(slots_))}장을 받은 순서대로 넣었어요.")
                         st.rerun()
@@ -756,13 +766,22 @@ if page == "② 재료 만들기":
                     else:
                         plan0.append(img_slots[ii] if ii < len(img_slots) else "넣지 않음"); ii += 1
                 # ① 파일 이름에 자리(c02, c02-2, v01)가 있으면 그대로 — 가장 정확
-                named = 0
+                named, dup_ = 0, 0
+                vid_nos_ = {int(c["no"]) for c in data["cuts"] if c["kind"] == "video"}
+                seen_ = set()
                 for k, u in enumerate(ups):
                     sl = slot_from_name(u.name)
-                    if sl is not None:
-                        plan0[k] = sl; named += 1
+                    if sl is None:
+                        continue
+                    is_img_ = Path(u.name).suffix.lower() not in (".mp4", ".mov")
+                    if is_img_ and isinstance(sl, int) and sl in vid_nos_:
+                        sl = f"{sl}-시작"          # 대사 영상 컷의 그림 = 영상 만들 첫 장면 그림
+                    if (sl, is_img_) in seen_:      # 같은 자리 그림이 2장(플로우가 2장씩 만든 것) → 먼저 받은 것만
+                        plan0[k] = "넣지 않음"; dup_ += 1
+                        continue
+                    seen_.add((sl, is_img_)); plan0[k] = sl; named += 1
                 if named:
-                    st.info(f"파일 이름으로 {named}개 자리를 찾았어요.")
+                    st.info(f"파일 이름으로 {named}개 자리를 찾았어요." + (f" 같은 자리에 2장 이상인 {dup_}장은 빼 두었어요(아래 목록에서 바꿀 수 있어요)." if dup_ else ""))
                 # ② 이름이 없는 그림만 AI가 보고 맞추기
                 pic_idx = [k for k, u in enumerate(ups) if Path(u.name).suffix.lower() not in (".mp4", ".mov")
                            and slot_from_name(u.name) is None]
