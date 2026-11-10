@@ -145,6 +145,12 @@ def cut_file(p, no):
     return None
 
 
+LOOK_EN = ("All people look about 5 to 10 years younger than their stated age, good-looking but natural, neat and tidy: "
+           "clean well-groomed hair, smooth clear skin, fresh clean well-fitting clothes with no stains or wrinkles. "
+           "Backgrounds are simplified and softly painted, illustration-like rather than photographic, clean and uncluttered, "
+           "while the people stay crisp and sharp")
+LOOK_KO = ("인물은 설정 나이보다 5~10살 젊어 보이게, 단정하고 깔끔하게(정돈된 머리, 맑은 피부, 얼룩·구김 없는 깨끗한 옷). "
+           "배경은 사진처럼 사실적이지 않게 — 단순하고 부드러운 그림 느낌으로 깔끔하게, 인물만 또렷하게")
 ART_STYLES = {
     "반실사 일러스트": ("Realistic semi-real style, about 75 percent realistic: real human facial structure and proportions, "
                   "realistic eyes, nose and skin, like a high-end retouched portrait or a realistic 3D render — only the skin, light and background "
@@ -160,7 +166,8 @@ ART_STYLES = {
 
 
 def art_style(cfg):
-    return ART_STYLES.get(cfg.get("art_style", "반실사 일러스트"), ART_STYLES["반실사 일러스트"])
+    en, ko = ART_STYLES.get(cfg.get("art_style", "반실사 일러스트"), ART_STYLES["반실사 일러스트"])
+    return en + ". " + LOOK_EN, ko + ". " + LOOK_KO
 
 
 EXTRA = ["b", "c"]   # 그림 컷의 두 번째·세 번째 화면 파일: 02_b.png, 02_c.png
@@ -415,13 +422,13 @@ if page == "② 재료 만들기":
                 with st.spinner("기준 그림 만드는 중…"):
                     ai.make_image(cfg, f"Character reference sheet: all main characters standing side by side, left to right in the order listed, full body, "
                                        f"facing camera, plain bright background, clear faces. {data.get('characters','')}. "
-                                       "Ordinary everyday Korean people with average, natural faces. "
+                                       "Ordinary Korean people with natural, pleasant faces, looking 5-10 years younger than described, neat and clean. "
                                        "Bright, airy, high-key lighting, no text. ART STYLE (must follow): " + art_style(cfg)[0] + ".",
                                   ref, aspect=aspect)
             except Exception as e:
                 st.error(f"오류: {e}")
         rc1.text_area("플로우에서 기준 그림 만들 문구 (무료)",
-                      f"{art_style(cfg)[1]}. 등장인물 전원이 왼쪽부터 순서대로 나란히 서 있는 전신 그림, 정면, 밝고 단순한 배경, "
+                      f"{art_style(cfg)[1]}. 등장인물 전원이 왼쪽부터 순서대로 나란히 서 있는 전신 그림, 정면, 밝고 단순한 배경, 실제 나이보다 젊고 깔끔하게, "
                       f"얼굴이 또렷하게, 글자 없이. 등장인물: {data.get('characters','')}", height=100, key="ref_flow")
         upr = rc1.file_uploader("또는 플로우에서 만든 인물 그림 올리기", type=["png", "jpg", "jpeg", "webp"], key="ref_up")
         if new_upload(f"{p.name}_ref", upr):
@@ -608,7 +615,7 @@ if page == "② 재료 만들기":
                     (p / "재료" / f"{no:02d}.png").write_bytes(pc.read_bytes()); put.append(no)
                 st.success(f"{len(pieces)}장으로 나눠 컷 {put} 에 넣었어요." + ("" if len(put) == len(pieces) else " (빈 컷이 모자라 일부는 안 넣었어요)"))
         st.markdown("### 🆓 플로우로 한 번에 만들기 (무료)")
-        common = (f"{ratio_ko}, {art_style(cfg)[1]}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로(옛날 초가 주막이면 허름한 초가 그대로 — 더 부유하거나 현대식으로 바꾸지 말 것), 정지 그림은 음식 클로즈업이나 인물 얼굴 클로즈업(멀리서 형체만 보이는 장면 금지), 인물은 옛날 이야기라도 단정하고 깔끔하게, 얼굴은 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷하게 보여 감정이 읽히게), 두 사람이면 한 사람 얼굴을 크게 앞에·상대는 뒤에 작고 흐리게, 주변은 흐리고 단순하게(지저분한 물건 없이), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 평범한 일반인 얼굴(화장 옅게, "
+        common = (f"{ratio_ko}, {art_style(cfg)[1]}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로(옛날 초가 주막이면 허름한 초가 그대로 — 더 부유하거나 현대식으로 바꾸지 말 것), 정지 그림은 음식 클로즈업이나 인물 얼굴 클로즈업(멀리서 형체만 보이는 장면 금지), 인물은 옛날 이야기라도 단정하고 깔끔하게, 얼굴은 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷하게 보여 감정이 읽히게), 두 사람이면 한 사람 얼굴을 크게 앞에·상대는 뒤에 작고 흐리게, 주변은 흐리고 단순하게(지저분한 물건 없이), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 호감 가는 평범한 일반인 얼굴(실제 나이보다 젊어 보이게, 화장 옅게, "
                   f"자연스러운 피부). 모든 장면에서 같은 인물: {data.get('characters','')}")
         lines_all = ["아래 그림들을 순서대로 만들어 줘. 각 그림의 이름(제목)은 줄 맨 앞 [ ] 안의 이름 그대로 지어 줘 (예: c02, c02-2).",
                      "【인물 규칙 — 꼭 지킬 것】 첨부한 '인물 기준 그림'의 사람들만 나온다. 장면마다 같은 얼굴·머리·옷 그대로. "
