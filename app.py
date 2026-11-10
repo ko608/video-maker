@@ -1083,8 +1083,8 @@ if page == "③ 완성 영상":
                         and not (own_voice and list((p / "재료").glob(f"{int(c['no']):02d}_나레이션.*")))
                         and not (p / "work" / f"v_{cfg.get('tts_voice','Kore')}_{int(c['no']):02d}.wav").exists()]
                 if need:
-                    log(f"나레이션 목소리 {len(need)}개를 동시에 만드는 중…")
-                    with ThreadPoolExecutor(max_workers=4) as pool:
+                    log(f"나레이션 목소리 {len(need)}개를 하나씩 만드는 중… (한 개에 보통 10~40초)")
+                    with ThreadPoolExecutor(max_workers=1) as pool:   # 구글 목소리는 동시에 여러 개 보내면 '1분 한도'에 걸려 오래 쉬어요
                         futs = {pool.submit(ai.make_tts, cfg, c["narration"], p / "work" / f"v_{cfg.get('tts_voice','Kore')}_{int(c['no']):02d}.wav"): c["no"] for c in need}
                         k = 0
                         for fu in as_completed(futs):
