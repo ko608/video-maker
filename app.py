@@ -221,8 +221,34 @@ def extra_files(p, no):
     return out
 
 
+def video_frames(p):
+    """대사 영상(mp4)에서 썸네일용 장면 한 장씩 뽑기 (영상 40% 지점, 이미 뽑았으면 다시 안 뽑음)"""
+    import subprocess
+    for v in (p / "재료").glob("*.mp4"):
+        if not v.stem.isdigit():
+            continue
+        out = p / "재료" / f"{v.stem}_영상장면.jpg"
+        if out.exists() and out.stat().st_mtime >= v.stat().st_mtime:
+            continue
+        try:
+            dur = 4.0
+            try:
+                r = subprocess.run([assemble.ffmpeg_exe(), "-i", str(v)], capture_output=True, text=True)
+                import re as _re
+                m = _re.search(r"Duration: (\d+):(\d+):([\d.]+)", r.stderr)
+                if m:
+                    dur = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3))
+            except Exception:
+                pass
+            subprocess.run([assemble.ffmpeg_exe(), "-y", "-v", "error", "-ss", f"{dur * 0.4:.2f}", "-i", str(v),
+                            "-frames:v", "1", "-q:v", "2", str(out)], check=True, capture_output=True)
+        except Exception:
+            pass
+
+
 def scene_pics(p):
-    """썸네일 후보 그림 (기준 그림 제외) — 컷 그림·추가 화면·첫 장면·썸네일 전용"""
+    """썸네일 후보 그림 (기준 그림 제외) — 컷 그림·추가 화면·첫 장면·영상에서 뽑은 장면·썸네일 전용"""
+    video_frames(p)
     return sorted([x for x in (p / "재료").iterdir() if x.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")
                    and "기준" not in x.name], key=lambda x: x.name)
 
@@ -241,7 +267,7 @@ def make_thumbs(p, data, fmt, picks=None):
                 for no in ai.pick_key_scenes(cfg, data):
                     f_ = cut_file(p, no)
                     if f_ is None or f_.suffix.lower() in (".mp4", ".mov"):
-                        st_ = list((p / "재료").glob(f"{no:02d}_첫장면.*"))
+                        st_ = list((p / "재료").glob(f"{no:02d}_영상장면.*")) + list((p / "재료").glob(f"{no:02d}_첫장면.*"))
                         f_ = st_[0] if st_ else None
                     if f_ is not None:
                         chosen.append(f_)
@@ -327,7 +353,10 @@ if page == "① 분석·대본":
                 f"[올영상 구성 — 위 규칙보다 우선] 전체 {n}컷 모두 kind \"video\"(대사 영상). 그림+나레이션 컷과 narration은 쓰지 않는다 — 이야기는 오직 인물들의 대사로만 전한다. "
                 "대사는 컷마다 15~30자(4~6초), 결정적인 한마디만 40자 이내(8초). 두 사람 이상이 주고받게 — 말 → 상대의 반응 대사 → 다시 말, 한 사람이 연달아 길게 말하지 않는다. "
                 "1컷은 갈등이 바로 터지는 첫마디(설명 금지). 이야기의 열쇠 물건·음식(봉투, 국밥, 앞치마 등)이 대사와 화면에 반복해 나온다. "
-                f"작은 반전·의문은 3~4컷마다, 큰 반전은 {twist}컷 무렵 한마디로 터뜨린다. 마지막 컷은 여운이 남는 한마디 대사로 끝낸다(채널 마무리 나레이션 규칙은 무시). "
+                f"작은 반전·의문은 3~4컷마다, 큰 반전은 {twist}컷 무렵 한마디로 터뜨린다. "
+                f"[결말은 꼭 보여 줄 것] 반전 뒤 마지막 3~4컷({n - 3}~{n}컷)은 '결과'를 보여 준다: ① 숨은 이유·진실이 드러나는 결정적 한마디 ② 그 말을 들은 사람의 감정 반응(눈물·웃음·놀람) ③ 이야기의 열쇠 물건·음식이 다시 나오며 상황이 바뀐 모습(예: 새 식권을 건네받음, 함께 국밥을 먹음) ④ 여운이 남는 마무리 한마디. "
+                "궁금한 채로 끊거나 '무슨 소리인가' 같은 질문으로 끝내지 말 것 — 보는 사람이 결말까지 알고 만족해야 한다(채널 마무리 나레이션 규칙은 무시). "
+                f"컷 수는 반드시 {n}개 — 모자라게 쓰지 말 것. "
                 "화면은 말하는 사람 얼굴 클로즈업을 기본으로, 3~4컷에 한 번은 두 사람이 함께 보이는 허리 위 투샷이나 어깨 너머 샷, 반전 컷은 듣는 사람의 놀란 얼굴. "
                 "characters에는 인물마다 끝까지 바뀌지 않는 대표 옷·색·소품을 정해 적고(예: 연보라 니트, 남색 체크 셔츠), 반전 뒤에는 옷이나 소품 하나를 바꿔 변화를 보여 줄 수 있다(예: 남편이 앞치마를 두름)."]
         elif n != ch.get("cuts", 6):
@@ -1105,10 +1134,17 @@ if page == "③ 완성 영상":
             names_ = [x.name for x in pics_]
             cur_ = [Path(x).name for x in data.get("thumb_scenes", [])]
             ca, cb = st.columns(2)
+            def _pic_lbl(n_):
+                st_ = Path(n_).stem
+                if st_.endswith("_영상장면"):
+                    return f"컷 {int(st_.split('_')[0])} 대사 영상 장면"
+                if st_.endswith("_첫장면"):
+                    return f"컷 {int(st_.split('_')[0])} 첫 장면 그림"
+                return n_
             ia = ca.selectbox("썸네일 A 장면", names_, index=names_.index(cur_[0]) if cur_ and cur_[0] in names_ else 0,
-                              key="tha") if names_ else None
+                              key="tha", format_func=_pic_lbl) if names_ else None
             ib = cb.selectbox("썸네일 B 장면", names_, index=names_.index(cur_[1]) if len(cur_) > 1 and cur_[1] in names_ else min(1, len(names_) - 1),
-                              key="thb") if names_ else None
+                              key="thb", format_func=_pic_lbl) if names_ else None
             if ia:
                 show_small(ca, p / "재료" / ia)
             if ib:

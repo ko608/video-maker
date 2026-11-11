@@ -269,6 +269,20 @@ def write_script(cfg, channel, analysis="", topic=""):
             name=channel["name"], rules="\n".join("- " + r for r in channel["rules"]),
             analysis=analysis or "(분석 없음)", topic=topic or "(자유 주제)", ncuts=channel["cuts"])
         data = _json_from(_claude(cfg, prompt))
+        # 올영상: 컷이 모자라면(결말이 잘리면) 한 번 더 — 모자란 만큼 결말까지 이어 쓰기
+        if any("[올영상 구성" in r for r in channel["rules"]) and len(data.get("cuts", [])) < int(channel["cuts"]) - 1:
+            try:
+                have = data.get("cuts", [])
+                need = int(channel["cuts"]) - len(have)
+                cont = _json_from(_claude(cfg, "아래는 대사로만 이어지는 쇼츠 드라마 대본입니다. 컷이 모자라 결말이 빠졌어요.\n"
+                    + "\n".join(f"{c.get('no')}. {c.get('speaker','')}: {c.get('line','')}" for c in have)
+                    + f"\n\n등장인물: {data.get('characters','')}\n이어서 {need}컷을 더 써서 결말을 완성하세요: 숨은 이유가 드러나는 결정적 한마디 → 상대의 감정 반응 → 열쇠 물건·음식이 다시 나오며 바뀐 모습 → 여운 있는 마무리 한마디. "
+                    + "앞 컷과 같은 형식(kind \"video\", speaker, speaker_en, line 15~30자, visual 영어)으로, 아래 JSON 하나만: {\"cuts\": [...]}", max_tokens=4000))
+                for c in cont.get("cuts", [])[:need]:
+                    c["kind"] = "video"; c["no"] = len(have) + 1; have.append(c)
+                data["cuts"] = have
+            except Exception:
+                pass
     up = channel.get("upload", {})
     if up.get("description_tail") and up["description_tail"] not in data.get("description", ""):
         data["description"] = data.get("description", "").rstrip() + "\n" + up["description_tail"]
