@@ -25,7 +25,15 @@ def _version():
     try:
         import subprocess
         return subprocess.run(["git", "log", "-1", "--format=%cd", "--date=format:%m월 %d일 %H:%M"],
-                              cwd=str(config.ROOT), capture_output=True, text=True, timeout=5).stdout.strip()
+                              cwd=str(config.ROOT), capture_output=True, text=True, timeout=5).stdout.strip() or _file_ver()
+    except Exception:
+        return _file_ver()
+
+
+def _file_ver():
+    try:      # git을 못 부를 때는 프로그램 파일이 바뀐 시각으로
+        import datetime as _dt
+        return _dt.datetime.fromtimestamp(Path(__file__).stat().st_mtime).strftime("%m월 %d일 %H:%M") + " (파일)"
     except Exception:
         return "?"
 st.caption(f"잘 되는 영상 링크 → 분석 → 우리식 대본 → 재료 → 완성 영상까지  ·  버전: {_version()}")

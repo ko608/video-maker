@@ -24,7 +24,10 @@ def _claude(cfg, prompt, max_tokens=8000):
             return st_.get_final_text().strip()
     r = c.messages.create(model=cfg["claude_model"], max_tokens=max_tokens,
                           messages=[{"role": "user", "content": prompt}])
-    return "".join(b.text for b in r.content if getattr(b, "type", "") == "text").strip()
+    text = "".join(b.text for b in r.content if getattr(b, "type", "") == "text").strip()
+    if (not text or "{" not in text) and getattr(r, "stop_reason", "") == "max_tokens" and max_tokens < 16000:
+        return _claude(cfg, prompt, max_tokens=16000)        # 길이가 모자라 비어 있으면 넉넉하게 다시
+    return text
 
 
 def _json_from(text):
@@ -40,7 +43,8 @@ def _json_from(text):
                     return fixed
             except Exception:
                 pass
-        raise RuntimeError("AI 답에서 대본(JSON)을 찾지 못했어요. 다시 눌러 주세요.")
+        raise RuntimeError("AI 답에서 대본(JSON)을 찾지 못했어요. 다시 눌러 주세요."
+                           + (f" (AI 답 앞부분: {text.strip()[:120]})" if text and text.strip() else " (AI 답이 비어 있어요)"))
     raw = m.group(0)
     try:
         return json.loads(raw)
@@ -577,7 +581,10 @@ def suggest_topics(cfg, channel, keyword, avoid=None):
 
 아래 JSON 하나만 출력하세요.
 {{"ideas": [{{"frame": "틀 이름(예: 사이다)", "title": "주제 제목(20자 안팎, 궁금증 생기게)", "twist": "핵심 반전 한 줄(30자 안팎)", "ending": "끝나는 장면 한 줄(20자 안팎)"}}]}}"""
-    data = _json_from(_claude(cfg, prompt, max_tokens=2500))
+    try:
+        data = _json_from(_claude(cfg, prompt, max_tokens=6000))
+    except Exception:
+        data = _json_from(_claude(cfg, prompt + "\n\n(중요: 설명 없이 JSON 하나만 출력하세요.)", max_tokens=8000))
     return data.get("ideas", [])[:6]
 
 
