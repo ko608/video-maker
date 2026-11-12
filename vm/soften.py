@@ -23,6 +23,14 @@ EN = [
     (r"\bhit(s|ting)?\b", "push"), (r"\bslap(s|ped|ping)?\b", "push"), (r"\bknife\b", "kitchen tool"),
     (r"\bgun\b", "object"), (r"\bpolice\b", "neighbor"), (r"\bsteal(s|ing)?\b", "take secretly"),
     (r"\bstole(n)?\b", "took secretly"), (r"\bthief\b", "someone"), (r"\bdrunk\b", "tired"),
+    # 미성년자로 보이는 말 → 성인 (플로우는 아이·청소년 영상을 거부함)
+    (r"\bteen(age|aged)?\s+girl\b", "young woman in her twenties"), (r"\bteen(age|aged)?\s+boy\b", "young man in his twenties"),
+    (r"\bteen(ager)?s?\b", "young adult in their twenties"), (r"\b(little|young)\s+girl\b", "young woman in her twenties"),
+    (r"\b(little|young)\s+boy\b", "young man in his twenties"), (r"\bschool\s?girl\b", "young woman in her twenties"),
+    (r"\bschool\s?boy\b", "young man in his twenties"), (r"\b(child|kid)(ren|s)?\b", "adult son or daughter in their twenties"),
+    (r"\bhigh school student\b", "university student in her twenties"), (r"\bmiddle school student\b", "university student in her twenties"),
+    (r"\b(a|the)\s+girl\b", r"\1 young woman"), (r"\b(a|the)\s+boy\b", r"\1 young man"),
+    (r"\bponytail with (a )?(red )?ribbon\b", "neat ponytail"), (r"\bschool uniform\b", "neat casual outfit"),
     (r"\bcigarette(s)?\b", "habit"), (r"\bangry\b", "upset"), (r"\bangrily\b", "with a stern face"), (r"\bfurious\b", "upset"), (r"\bscream(s|ing)?\b", "call out"),
 ]
 
