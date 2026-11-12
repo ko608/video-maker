@@ -30,6 +30,16 @@ def _claude(cfg, prompt, max_tokens=8000):
 def _json_from(text):
     m = re.search(r"\{.*\}", text, re.S)
     if not m:
+        # 답이 길어서 끝(})이 잘린 경우 — 잘린 곳까지라도 고쳐서 읽기
+        i = text.find("{")
+        if i >= 0:
+            try:
+                import json_repair
+                fixed = json_repair.loads(text[i:])
+                if isinstance(fixed, dict) and fixed:
+                    return fixed
+            except Exception:
+                pass
         raise RuntimeError("AI 답에서 대본(JSON)을 찾지 못했어요. 다시 눌러 주세요.")
     raw = m.group(0)
     try:
@@ -268,7 +278,10 @@ def write_script(cfg, channel, analysis="", topic=""):
         prompt = SCRIPT_PROMPT.format(
             name=channel["name"], rules="\n".join("- " + r for r in channel["rules"]),
             analysis=analysis or "(분석 없음)", topic=topic or "(자유 주제)", ncuts=channel["cuts"])
-        data = _json_from(_claude(cfg, prompt))
+        try:
+            data = _json_from(_claude(cfg, prompt, max_tokens=16000))
+        except Exception:
+            data = _json_from(_claude(cfg, prompt + "\n\n(중요: 설명 없이 JSON 하나만, 끝까지 완성해서 출력하세요.)", max_tokens=16000))
         # 올영상: 컷이 모자라면(결말이 잘리면) 한 번 더 — 모자란 만큼 결말까지 이어 쓰기
         if any("[올영상 구성" in r for r in channel["rules"]) and len(data.get("cuts", [])) < int(channel["cuts"]) - 1:
             try:
