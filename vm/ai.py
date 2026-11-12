@@ -151,7 +151,7 @@ SCRIPT_PROMPT = """당신은 조회수가 잘 나오는 한국 유튜브 스토�
 
 아래 JSON 하나만 출력하세요. 다른 말은 쓰지 마세요.
 {{
- "title_options": ["제목 후보 3개 — 첫 대사 인용 + 비밀/반전 암시"],
+ "title_options": ["제목 후보 3개 — 첫 대사 인용 + 비밀/반전 암시 (범인·경찰·사기·죽음 같은 범죄·사건 말 금지 — 유튜브가 추천을 줄임)"],
  "description": "유튜브 설명 3~4줄 (줄바꿈은 \\n)",
  "tags": "쉼표로 구분한 태그 한 줄 (15개 안팎)",
  "pinned_comment": "고정 댓글 한 줄",
@@ -193,7 +193,7 @@ LONG_SCRIPT_PROMPT = """당신은 시청자가 20~30분 동안 한 번도 넘기
 
 아래 JSON 하나만 출력하세요. 다른 말은 쓰지 마세요.
 {{
- "title_options": ["제목 후보 3개 — 첫 대사 인용 + 반전 암시, 예: “남은 국물만 주세요” 그 손님의 정체…"],
+ "title_options": ["제목 후보 3개 — 첫 대사 인용 + 반전 암시, 예: “남은 국물만 주세요” 그 손님의 정체… (범인·경찰·사기·죽음 같은 범죄·사건 말 금지)"],
  "description": "유튜브 설명 4~6줄 (줄바꿈은 \\n). 마지막 줄은 '※ 이 영상은 창작 드라마이며 등장인물과 사건은 모두 가상입니다.'",
  "tags": "쉼표로 구분한 태그 한 줄 (15개 안팎)",
  "pinned_comment": "고정 댓글 한 줄 (시청자 경험을 묻는 질문)",
@@ -312,7 +312,21 @@ def write_script(cfg, channel, analysis="", topic=""):
     data["format"] = channel.get("format", "shorts")
     data = fix_short_lines(cfg, data)
     # 플로우가 거부하는 격한 단어를 대사·장면 묘사에서 부드럽게 (나레이션은 그대로)
-    from .soften import soften
+    from .soften import soften, has_bad_title
+    # 제목·썸네일에 범죄·사건 말(범인·경찰·사기·죽음…)이 있으면 유튜브가 추천을 줄여서, 궁금증 말로 다시 쓰기
+    try:
+        bad = [t for t in data.get("title_options", []) + data.get("thumbnail", []) + [data.get("title", "")] if has_bad_title(t)]
+        if bad:
+            fix = _json_from(_claude(cfg, "유튜브 쇼츠 제목·썸네일 문구입니다. 범인·경찰·신고·고소·사기·도둑·죽음·불륜 같은 범죄·사건 말이 있으면 "
+                "유튜브가 선정적·낚시성으로 보고 추천을 줄입니다. 그런 말을 빼고 '비밀·숨긴 이유·몰랐던 진실·그날·정체' 같은 말로 궁금증은 살려서, "
+                "길이는 비슷하게 자연스럽게 고쳐 주세요. 문제없는 문구는 그대로 두세요.\n"
+                + json.dumps({"title_options": data.get("title_options", []), "thumbnail": data.get("thumbnail", []), "title": data.get("title", "")}, ensure_ascii=False)
+                + "\n같은 모양의 JSON 하나만 출력하세요.", max_tokens=1500))
+            for k in ("title_options", "thumbnail", "title"):
+                if fix.get(k):
+                    data[k] = fix[k]
+    except Exception:
+        pass
     for c in data.get("cuts", []):
         c["line"] = soften(c.get("line", ""))
         c["visual"] = soften(c.get("visual", ""))

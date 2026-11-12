@@ -44,3 +44,11 @@ def soften(text):
     for pat, rep in EN:
         t = re.sub(pat, rep, t, flags=re.I)
     return t
+
+
+# ---- 유튜브 제목·썸네일용: 범죄·사건 말 찾기 (있으면 AI가 자연스러운 문장으로 다시 씀) ----
+TITLE_BAD = r"범인|범죄|살인|살해|경찰|신고|고소|소송|재판|감옥|교도소|구속|체포|사기|도둑|훔쳤|훔친|폭행|폭력|때렸|죽었|죽인|죽여|죽음|자살|극단적|불륜|바람피|바람난|마약"
+
+
+def has_bad_title(text):
+    return bool(text and re.search(TITLE_BAD, text))
