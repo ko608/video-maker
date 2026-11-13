@@ -191,22 +191,22 @@ def cut_file(p, no):
 
 LOOK_EN = ("All people are adults aged 20 or older (no children, no teenagers, no school uniforms). Each person wears clothes in one vivid, eye-catching signature color that differs from the others (e.g. bright pink, vivid blue, sunny yellow, fresh green — never dull grey, beige or black), the same outfit in every scene. "
            "All people look about 5 to 10 years younger than their stated age, good-looking but natural, neat and tidy: "
-           "clean well-groomed hair, smooth clear skin, fresh clean well-fitting clothes with no stains or wrinkles. "
+           "clean well-groomed hair, clear healthy skin with fine natural texture (not airbrushed), faces in razor-sharp focus, fresh clean well-fitting clothes with no stains or wrinkles. "
            "The face and its emotion are the subject: frame tightly so the face fills most of the picture; "
            "the background is real but softly out of focus (shallow depth of field), bright, clean and simple, "
            "while the people stay crisp and sharp")
 LOOK_KO = ("모든 인물은 20세 이상 성인(아이·청소년·교복 금지). 인물마다 서로 다른 또렷하고 선명한 대표 색 옷(진분홍·쨍한 파랑·노랑·초록 등, 회색·베이지·검정 같은 흐린 색 금지)을 장면마다 똑같이. "
-           "인물은 설정 나이보다 5~10살 젊어 보이게, 단정하고 깔끔하게(정돈된 머리, 맑은 피부, 얼룩·구김 없는 깨끗한 옷). "
+           "인물은 설정 나이보다 5~10살 젊어 보이게, 단정하고 깔끔하게(정돈된 머리, 맑지만 뭉개지지 않은 자연스러운 피부결, 얼굴은 초점이 딱 맞게 선명하게, 얼룩·구김 없는 깨끗한 옷). "
            "주인공은 얼굴 표정과 감정 — 얼굴이 화면 대부분을 채우게 가깝게, 배경은 밝고 깨끗하게, 카메라 초점이 인물에 맞아 뒤는 부드럽게 흐려진 느낌(그림처럼 뭉개지 말 것), 인물만 또렷하게")
 ART_STYLES = {
     "반실사 일러스트": ("Realistic semi-real style, about 75 percent realistic: real human facial structure and proportions, "
-                  "realistic eyes, nose and skin, like a bright, polished Korean TV drama still with a light beauty retouch — realistic but clean: skin, clothes and background "
+                  "realistic eyes, nose and skin, like a bright, polished Korean TV drama still shot in tack-sharp focus with a high-end camera — crisp, high-detail faces (sharp eyes with catchlights, defined eyelashes and eyebrows, fine natural skin texture, crisp hair strands), no soft focus, no blur, no beauty-filter smoothing, no haze; clothes and background "
                   "are smooth and tidy, not painterly, no brush strokes. NOT anime, NOT cartoon, NOT webtoon, no big anime eyes, no outlines; "
                   "the person is crisp and sharp with good contrast, background evenly lit — no glow, no bloom, no haze",
-                  "밝고 깨끗한 한국 TV 드라마 장면 같은 반실사(얼굴·피부는 실제 사람처럼 자연스럽게, 가벼운 뽀샵 보정으로 매끈하고 깔끔하게 — 붓 그림·일러스트 느낌 금지, 거칠고 칙칙한 실사 사진도 금지), "
+                  "밝고 깨끗한 한국 TV 드라마 장면 같은 반실사(얼굴·피부는 실제 사람처럼 자연스럽게, 초점이 딱 맞은 선명한 고화질 — 눈동자·속눈썹·눈썹·머리카락·자연스러운 피부결까지 또렷하게, 뽀샵 뭉개짐·흐림·뿌연 느낌 금지 — 붓 그림·일러스트 느낌 금지, 거칠고 칙칙한 실사 사진도 금지), "
                   "애니메이션·만화·웹툰 느낌 금지, 인물은 윤곽이 또렷하고 선명하게, 배경 빛 번짐·뿌연 느낌 없이"),
     "깔끔한 드라마 사진풍": ("Clean polished Korean TV drama still photo: smooth even skin, no grit, no film grain, tidy simple background",
-                     "깔끔한 드라마 사진풍(매끈한 피부, 거친 질감·지저분한 배경 없이)"),
+                     "깔끔한 드라마 사진풍(선명한 고화질, 얼굴 초점 정확, 지저분한 배경 없이)"),
     "웹툰풍": ("Korean webtoon art style: clean line art, bright flat colors, expressive faces, simple backgrounds",
             "한국 웹툰 그림체(깔끔한 선, 밝은 색, 표정이 풍부하게, 단순한 배경)"),
 }
