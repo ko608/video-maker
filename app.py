@@ -511,7 +511,7 @@ if page == "② 재료 만들기":
         if rc1.button("👤 기준 그림 만들기 (1장, 수십 원)"):
             try:
                 with st.spinner("기준 그림 만드는 중…"):
-                    ai.make_image(cfg, f"Character reference sheet: all main characters standing side by side, left to right in the order listed, full body, "
+                    ai.make_image(cfg, f"Character reference sheet: all main characters side by side, left to right in the order listed, chest-up portraits with large clear faces, "
                                        f"facing camera, plain bright background, clear faces. {data.get('characters','')}. "
                                        "Ordinary Korean people with natural, pleasant faces, looking 5-10 years younger than described, neat and clean. "
                                        "Bright, airy, high-key lighting, no text. ART STYLE (must follow): " + art_style(cfg)[0] + ".",
@@ -519,7 +519,7 @@ if page == "② 재료 만들기":
             except Exception as e:
                 st.error(f"오류: {e}")
         rc1.text_area("플로우에서 기준 그림 만들 문구 (무료)",
-                      f"{art_style(cfg)[1]}. 등장인물 전원이 왼쪽부터 순서대로 나란히 서 있는 전신 그림, 정면, 밝고 단순한 배경, 실제 나이보다 젊고 깔끔하게, "
+                      f"{art_style(cfg)[1]}. 등장인물 전원이 왼쪽부터 순서대로 나란히 있는 가슴 위 상반신 그림(얼굴이 크게), 정면, 밝고 단순한 배경, 실제 나이보다 젊고 깔끔하게, "
                       f"얼굴이 또렷하게, 글자 없이. 등장인물: {data.get('characters','')}", height=100, key="ref_flow")
         upr = rc1.file_uploader("또는 플로우에서 만든 인물 그림 올리기", type=["png", "jpg", "jpeg", "webp"], key="ref_up")
         if new_upload(f"{p.name}_ref", upr):
@@ -550,7 +550,9 @@ if page == "② 재료 만들기":
                             continue
                         base = (f"Scene {no}: {vis}. Style: {style}. Characters: {data.get('characters','')}. "
                                 "Ordinary everyday Korean people with average, natural faces, light natural makeup, "
-                                "tidy look. ONE single scene in one frame — no collage, no panels, no split screen, no comic layout")
+                                "tidy look. ONE single scene in one frame — no collage, no panels, no split screen, no comic layout. "
+                                "The reference image is ONLY for faces, hair and clothing colors: do NOT copy its pose, line-up, full-body framing or plain background; "
+                                "show only the people this scene mentions, in this scene's place and action, close-up")
                         jobs[pool.submit(ai.make_image, cfg, base, target, aspect, ref)] = f"{no}{'-' + tag if tag else ''}"
                 log(f"그림 {len(jobs)}장을 4장씩 동시에 만드는 중…")
                 done_n = 0
@@ -566,7 +568,9 @@ if page == "② 재료 만들기":
                     continue
                 base = (f"Scene {no}: {c['visual']}. Style: {style}. Characters: {data.get('characters','')}. "
                         "Ordinary everyday Korean people with average, natural faces, light natural makeup, "
-                        "tidy look. ONE single scene in one frame — no collage, no panels, no split screen, no comic layout")
+                        "tidy look. ONE single scene in one frame — no collage, no panels, no split screen, no comic layout. "
+                                "The reference image is ONLY for faces, hair and clothing colors: do NOT copy its pose, line-up, full-body framing or plain background; "
+                                "show only the people this scene mentions, in this scene's place and action, close-up")
                 try:
                     if c["kind"] == "image":
                         log(f"컷 {no}: 이미지 만드는 중")
@@ -707,10 +711,12 @@ if page == "② 재료 만들기":
                 st.success(f"{len(pieces)}장으로 나눠 컷 {put} 에 넣었어요." + ("" if len(put) == len(pieces) else " (빈 컷이 모자라 일부는 안 넣었어요)"))
         st.markdown("### 🆓 플로우로 한 번에 만들기 (무료)")
         common = (f"{ratio_ko}, {art_style(cfg)[1]}, 화면은 밝게(햇살·환한 조명), 배경·건물·옷은 이야기 시대와 장소 그대로(옛날 초가 주막이면 허름한 초가 그대로 — 더 부유하거나 현대식으로 바꾸지 말 것), 정지 그림은 음식 클로즈업이나 인물 얼굴 클로즈업(멀리서 형체만 보이는 장면 금지), 인물은 옛날 이야기라도 단정하고 깔끔하게, 얼굴은 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷하게 보여 감정이 읽히게), 두 사람이면 한 사람 얼굴을 크게 앞에·상대는 뒤에 작고 흐리게, 주변은 흐리고 단순하게(지저분한 물건 없이), 한 장에 한 장면만(여러 칸·분할 화면·콜라주 금지), 글자·자막 없이. 장면마다 볼거리 하나 — 감정이 드러난 큰 얼굴(눈물 고인 눈·놀란 눈·환한 웃음, 무표정 금지) 또는 이야기 속 음식·물건 아주 가까이, 사람 없는 빈 가게·부엌이나 손님 여럿 보이는 가게 전경 금지. 호감 가는 평범한 일반인 얼굴(실제 나이보다 젊어 보이게, 화장 옅게, "
-                  f"자연스러운 피부). 모든 장면에서 같은 인물: {data.get('characters','')}")
+                  f"자연스러운 피부). 인물 생김새(장면마다 같게, 단 그 장면 줄에 나오는 사람만 그릴 것 — 모두를 한 그림에 세우지 말 것): {data.get('characters','')}")
         lines_all = ["아래 그림들을 순서대로 만들어 줘. 각 그림의 이름(제목)은 줄 맨 앞 [ ] 안의 이름 그대로 지어 줘 (예: c02, c02-2).",
                      "【인물 규칙 — 꼭 지킬 것】 첨부한 '인물 기준 그림'의 사람들만 나온다. 장면마다 같은 얼굴·머리·옷 그대로. "
                      "새로운 주인공을 만들지 말 것. 모든 인물은 한국 사람. 식당 손님·하객 같은 배경 사람은 아주 작고 흐리게(얼굴 안 보이게).",
+                     "【기준 그림 사용법 — 아주 중요】 인물 기준 그림은 얼굴·머리·옷 색만 참고하는 자료예요. 기준 그림처럼 인물들이 일렬로 나란히 서 있는 그림, 전신 그림, 흰 배경 그림은 절대 만들지 말 것. "
+                     "각 그림에는 그 줄에 적힌 인물만(보통 1~2명) 나오고, 그 줄에 적힌 장소·행동·표정 그대로 실제 장면으로 — 가까이서 찍은 상반신·얼굴 클로즈업으로.",
                      f"등장인물: {data.get('characters','')}",
                      f"공통: {common}", ""]
         vid_lines = ["아래 대사 영상들을 차례로 만들어 줘. 각 영상 이름은 줄 맨 앞 [ ] 안의 이름 그대로(예: v01). 첨부한 인물 기준 그림과 같은 사람으로. "
@@ -730,10 +736,10 @@ if page == "② 재료 만들기":
                 vid_lines.append(f"[v{int(c['no']):02d}] {ai.video_seconds_for(c.get('line'))}초 영상, {c.get('speaker_en') or c.get('speaker','')} 말함: \"{c['line']}\" / 장면: {c['visual']}")
             else:
                 tagf = (lambda sl_: f"c{seq_no(data, sl_):02d}") if seqm else (lambda sl_: f"c{int(str(sl_).split('-')[0]):02d}" + (f"-{str(sl_).split('-')[1]}" if "-" in str(sl_) else ""))
-                lines_all.append(f"[{tagf(int(c['no']))}] {c['visual']}")
+                lines_all.append(f"[{tagf(int(c['no']))}] 장면(일렬 전신 금지): {c['visual']}")
                 for k_, v_ in enumerate(c.get("shots") or [], 2):
                     sk_ = f"{int(c['no'])}-{k_}"
-                    lines_all.append(f"[{tagf(sk_)}] {v_}")
+                    lines_all.append(f"[{tagf(sk_)}] 장면(일렬 전신 금지): {v_}")
         lines_all = [soften(x) for x in lines_all]
         st.text_area("① 그림 전체 문구 (그림 번호 c01, c02 … 차례대로) — 복사해서 플로우 채팅창에 한 번에" if seqm else "① 그림 전체 문구 (그림 컷만 — 2, 2-2, 2-3, 4 … 순서) — 복사해서 플로우 채팅창에 한 번에",
                      "\n".join(lines_all), height=220, key="flow_all")
