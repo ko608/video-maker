@@ -190,13 +190,13 @@ def cut_file(p, no):
 
 
 LOOK_EN = ("All people are adults aged 20 or older (no children, no teenagers, no school uniforms). Each person wears clothes in one vivid, eye-catching signature color that differs from the others (e.g. bright pink, vivid blue, sunny yellow, fresh green — never dull grey, beige or black), the same outfit in every scene. "
-           "All people look about 5 to 10 years younger than their stated age, good-looking but natural, neat and tidy: "
+           "All people look about 5 to 10 years younger than their stated age, pleasant ordinary everyday faces (fictional people, not idol-like, not resembling any celebrity, with small natural individual features), neat and tidy: "
            "clean well-groomed hair, clear healthy skin with fine natural texture (not airbrushed), faces in razor-sharp focus, fresh clean well-fitting clothes with no stains or wrinkles. "
            "The face and its emotion are the subject: frame tightly so the face fills most of the picture; "
            "the background is real but softly out of focus (shallow depth of field), bright, clean and simple, "
            "while the people stay crisp and sharp")
 LOOK_KO = ("모든 인물은 20세 이상 성인(아이·청소년·교복 금지). 인물마다 서로 다른 또렷하고 선명한 대표 색 옷(진분홍·쨍한 파랑·노랑·초록 등, 회색·베이지·검정 같은 흐린 색 금지)을 장면마다 똑같이. "
-           "인물은 설정 나이보다 5~10살 젊어 보이게, 단정하고 깔끔하게(정돈된 머리, 맑지만 뭉개지지 않은 자연스러운 피부결, 얼굴은 초점이 딱 맞게 선명하게, 얼룩·구김 없는 깨끗한 옷). "
+           "인물은 설정 나이보다 5~10살 젊어 보이게, 호감 가는 평범한 동네 사람 얼굴(지어낸 일반인 — 아이돌·연예인처럼 생기지 않게, 누구와도 닮지 않게, 사람마다 작은 개성), 단정하고 깔끔하게(정돈된 머리, 맑지만 뭉개지지 않은 자연스러운 피부결, 얼굴은 초점이 딱 맞게 선명하게, 얼룩·구김 없는 깨끗한 옷). "
            "주인공은 얼굴 표정과 감정 — 얼굴이 화면 대부분을 채우게 가깝게, 배경은 밝고 깨끗하게, 카메라 초점이 인물에 맞아 뒤는 부드럽게 흐려진 느낌(그림처럼 뭉개지 말 것), 인물만 또렷하게")
 ART_STYLES = {
     "반실사 일러스트": ("Realistic semi-real style, about 75 percent realistic: real human facial structure and proportions, "
