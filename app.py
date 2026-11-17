@@ -741,8 +741,21 @@ if page == "② 재료 만들기":
                     sk_ = f"{int(c['no'])}-{k_}"
                     lines_all.append(f"[{tagf(sk_)}] 장면(일렬 전신 금지): {v_}")
         lines_all = [soften(x) for x in lines_all]
-        st.text_area("① 그림 전체 문구 (그림 번호 c01, c02 … 차례대로) — 복사해서 플로우 채팅창에 한 번에" if seqm else "① 그림 전체 문구 (그림 컷만 — 2, 2-2, 2-3, 4 … 순서) — 복사해서 플로우 채팅창에 한 번에",
-                     "\n".join(lines_all), height=220, key="flow_all")
+        head_ = [x for x in lines_all if not x.startswith("[")]
+        body_ = [x for x in lines_all if x.startswith("[")]
+        head_.insert(2, "【같은 이야기·같은 인물】 모든 그림은 한 이야기의 장면이에요. 줄에 따로 적혀 있지 않으면 시대·장소는 이야기 배경 그대로(현대 이야기에 한복·옛날 부엌 금지), "
+                        "인물은 위 등장인물의 얼굴·머리·옷 색 그대로 — 처음 보는 새 얼굴 금지. 간판·글자·로고 금지. 한 장에 한 장면(두 칸으로 나뉜 그림 금지).")
+        CH_ = 8
+        groups_ = [body_[i:i + CH_] for i in range(0, len(body_), CH_)] or [[]]
+        if len(groups_) == 1:
+            st.text_area("① 그림 전체 문구 (그림 번호 c01, c02 … 차례대로) — 복사해서 플로우 채팅창에 한 번에" if seqm else "① 그림 전체 문구 (그림 컷만 — 2, 2-2, 2-3, 4 … 순서) — 복사해서 플로우 채팅창에 한 번에",
+                         "\n".join(head_ + groups_[0]), height=220, key="flow_all")
+        else:
+            st.info(f"그림이 {len(body_)}장이라 {len(groups_)}묶음으로 나눴어요. 한꺼번에 넣으면 플로우가 인물·시대를 잊고 뒤죽박죽 그려요. "
+                    "**묶음마다 플로우 새 채팅창**을 열고, 인물 기준 그림을 첨부한 뒤 붙여 넣으세요. (묶음마다 규칙·인물 설명이 다시 들어 있어요)")
+            for gi_, g_ in enumerate(groups_, 1):
+                st.text_area(f"① 그림 문구 {gi_}/{len(groups_)}묶음 ({g_[0].split(']')[0][1:]} ~ {g_[-1].split(']')[0][1:]})",
+                             "\n".join(head_ + g_), height=180, key=f"flow_all_{gi_}")
         if len(vid_lines) > 2:
             st.text_area("②-1 대사 영상 문구 한 번에 — ①의 그림이 다 나온 뒤, 같은 채팅창에 이어서 붙여 넣기",
                          "\n".join(soften(x) for x in vid_lines), height=150, key="flow_vids")
