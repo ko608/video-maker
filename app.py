@@ -375,6 +375,22 @@ if page == "① 분석·대본":
                 f"위 규칙의 '6컷'·'4컷 반전'은 무시하고, 큰 반전은 {twist}컷 무렵, 작은 반전·의문은 3컷마다 넣는다. "
                 "마지막 컷 나레이션 마무리 문장 규칙은 그대로 지킨다."]
     url = st.text_input("잘 되는 영상 유튜브 링크 (없으면 비워 두고 아래 주제만 써도 됩니다)")
+    use = st.radio("🔗 링크 영상을 어떻게 쓸까요?",
+                   ["🎭 따라 만들기 — 같은 상황·흐름 그대로, 인물·대사만 바꾸기",
+                    "🧩 참고만 — 구조·리듬만 빌려서 새 이야기"],
+                   key="link_use", help="따라 만들기: 조회수 터진 상황극을 장면 순서대로 따라가되 대사는 같은 뜻의 새 문장으로 써요 (그대로 베끼면 유튜브가 재사용 콘텐츠로 막아요)")
+    follow = use.startswith("🎭")
+    cast = ""
+    if follow:
+        CASTS = {
+            "원본 역할 그대로 (얼굴·이름·옷만 새로)": "",
+            "오늘이 선녀 등장 — 상담·조언해 주는 사람 역할": "원본에서 상담·조언·정체 공개·해결을 맡는 인물을 '오늘이 선녀'로 바꾼다 — 30대 후반의 단정하고 품위 있는 평범한 한국 여성(연예인 같지 않은 일반인 얼굴), 연분홍 저고리에 진분홍 치마 한복, 단정하게 쪽진 머리, 차분하고 따뜻한 눈빛과 또렷한 말투. 사주·운세 이야기로 상황을 풀어 준다. 나머지 인물은 원본 역할 그대로 얼굴·옷만 새로.",
+            "직접 쓰기": None,
+        }
+        cpick = st.selectbox("🎭 바꿀 인물", list(CASTS), key="cast_pick")
+        cast = CASTS[cpick] if CASTS[cpick] is not None else st.text_input(
+            "누구를 누구로 바꿀까요?", key="cast_text",
+            placeholder="예: 식당 사장 → 60대 국밥집 할머니(초록 앞치마) / 진상 손님 → 40대 남자(남색 점퍼)")
     # ---- 💡 한 단어 → 주제 후보 3~4개 뽑기 ----
     k1, k2 = st.columns([3, 1])
     kw = k1.text_input("💡 한 단어만 넣어도 주제를 뽑아 드려요", placeholder="예: 국밥, 보험, 반찬, 진상, 김장")
@@ -404,11 +420,12 @@ if page == "① 분석·대본":
         try:
             analysis = ""
             if url.strip():
-                log("영상 분석 중… (1~2분)")
-                analysis = ai.analyze_youtube(cfg, url, topic)
+                log("영상 분석 중… (1~2분)" if not follow else "영상 장면 설계도 뽑는 중… (1~2분)")
+                analysis = ai.analyze_youtube(cfg, url, topic, follow=follow)
                 st.session_state["analysis"] = analysis
-            log("우리식 대본 쓰는 중… (1분 안팎)")
-            st.session_state["draft"] = ai.write_script(cfg, ch, analysis, topic)
+                st.session_state["analysis_follow"] = follow
+            log("우리식 대본 쓰는 중… (1분 안팎)" if not (follow and url.strip()) else "같은 흐름으로 인물·대사 바꿔 쓰는 중… (1분 안팎)")
+            st.session_state["draft"] = ai.write_script(cfg, ch, analysis, topic, follow=follow and bool(url.strip()), cast=cast)
             st.session_state["draft_channel"] = ch["id"]
             log("완료! 아래에서 확인하고 고친 뒤 저장하세요.")
         except Exception as e:
@@ -416,7 +433,8 @@ if page == "① 분석·대본":
     if c2.button("🔁 대본만 다시 쓰기", width="stretch"):
         try:
             with st.spinner("다시 쓰는 중…"):
-                st.session_state["draft"] = ai.write_script(cfg, ch, st.session_state.get("analysis", ""), topic)
+                st.session_state["draft"] = ai.write_script(cfg, ch, st.session_state.get("analysis", ""), topic,
+                                                            follow=follow and st.session_state.get("analysis_follow", False), cast=cast)
         except Exception as e:
             st.error(f"오류: {e}")
 
@@ -447,7 +465,7 @@ if page == "① 분석·대본":
                 st.error(f"오류: {e}")
 
     if st.session_state.get("analysis"):
-        with st.expander("📊 영상 분석 보고서 (장점·단점·적용점)", expanded=False):
+        with st.expander("🎬 원본 장면 설계도 (따라 만들기)" if st.session_state.get("analysis_follow") else "📊 영상 분석 보고서 (장점·단점·적용점)", expanded=False):
             st.markdown(st.session_state["analysis"])
 
     d = st.session_state.get("draft")

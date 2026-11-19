@@ -123,12 +123,27 @@ ANALYZE_PROMPT = """당신은 한국 유튜브 쇼츠·롱폼 성공 분석가�
 """
 
 
-def analyze_youtube(cfg, url, extra=""):
+FOLLOW_PROMPT = """당신은 한국 유튜브 쇼츠 상황극 분석가입니다. 이 영상을 처음부터 끝까지 보고 듣고, 똑같은 흐름의 상황극을 '다른 배우·다른 대사'로 다시 찍을 수 있게
+아래 형식의 한국어 '장면 설계도'를 써 주세요. 60대도 읽기 쉬운 말로, 시간은 "0:07"처럼 표시하세요.
+
+## 한 줄 요약 (누가, 무슨 상황에서, 무엇이 뒤집혀, 어떻게 끝나나)
+## 왜 조회수가 터졌나 (3가지)
+## 등장인물 (역할 — 나이대·성별 — 성격·말투 — 이야기에서 맡은 일)
+## 첫 3초 후킹 (무슨 장면·말로 붙잡았나)
+## 장면 설계도 — 장면마다 한 줄씩, 빠짐없이 순서대로
+- 시간 | 누가 누구에게 | 대사의 '뜻'만 (문장 그대로 옮기지 말 것) | 행동·표정 | 카메라 (얼굴 클로즈업/투샷 등) | 보는 사람이 느끼는 감정
+## 반전 지점 (몇 초에, 무엇이 뒤집혔나)
+## 결말 (마지막 장면과 여운)
+## 이 흐름의 공식 한 줄 (예: 무시 → 정체 공개 → 통쾌)
+"""
+
+
+def analyze_youtube(cfg, url, extra="", follow=False):
     from google.genai import types
     client = _gclient(cfg)
     contents = types.Content(parts=[
         types.Part(file_data=types.FileData(file_uri=url.strip())),
-        types.Part(text=ANALYZE_PROMPT + (f"\n참고 메모: {extra}" if extra else "")),
+        types.Part(text=(FOLLOW_PROMPT if follow else ANALYZE_PROMPT) + (f"\n참고 메모: {extra}" if extra else "")),
     ])
     r = _with_retry(lambda m: client.models.generate_content(model=m, contents=contents),
                     [cfg["gemini_text_model"]] + FALLBACK_TEXT)
@@ -143,7 +158,7 @@ SCRIPT_PROMPT = """당신은 조회수가 잘 나오는 한국 유튜브 스토�
 [채널 규칙]
 {rules}
 
-[참고: 잘 된 영상 분석 — 구조와 리듬만 참고하고, 인물·사연·대사는 완전히 새로 쓸 것. 비슷한 문장이 나오면 안 됨]
+{ref_rule}
 {analysis}
 
 [대표님 요청 주제/메모]
@@ -176,7 +191,7 @@ LONG_SCRIPT_PROMPT = """당신은 시청자가 20~30분 동안 한 번도 넘기
 [채널 규칙]
 {rules}
 
-[참고: 잘 된 영상 분석 — 구조와 리듬만 참고]
+{ref_rule}
 {analysis}
 
 [대표님 요청 주제/메모 — 줄거리가 주어지면 그 줄거리를 살려 더 길고 긴장감 있게 키우세요]
@@ -216,9 +231,10 @@ image 컷 나레이션은 200~260자를 꼭 지켜 전체 길이를 맞추세요
 대사(line)와 visual에는 돈·병원·내놔 같은 격한 말 대신 부드러운 말을 쓰세요. 컷마다 visual은 서로 달라야 합니다."""
 
 
-def _write_long(cfg, channel, analysis, topic):
+def _write_long(cfg, channel, analysis, topic, ref_rule=None):
     prompt = LONG_SCRIPT_PROMPT.format(
         name=channel["name"], rules="\n".join("- " + r for r in channel["rules"]),
+        ref_rule=ref_rule or REF_NORMAL_LONG,
         analysis=analysis or "(분석 없음)", topic=topic or "(자유 주제)",
         ncuts=channel["cuts"], nchap=channel.get("chapters", 5), nopen=int(channel.get("opening_videos", 3)))
     data = _json_from(_claude(cfg, prompt, max_tokens=min(64000, int(channel['cuts']) * 450 + 3000)))
@@ -275,12 +291,28 @@ def _write_long(cfg, channel, analysis, topic):
     return data
 
 
-def write_script(cfg, channel, analysis="", topic=""):
+REF_NORMAL = "[참고: 잘 된 영상 분석 — 구조와 리듬만 참고하고, 인물·사연·대사는 완전히 새로 쓸 것. 비슷한 문장이 나오면 안 됨]"
+REF_NORMAL_LONG = "[참고: 잘 된 영상 분석 — 구조와 리듬만 참고]"
+
+
+def follow_rule(cast=""):
+    """'따라 만들기' — 원본 상황극의 흐름은 그대로, 인물·대사는 새로"""
+    return ("[따라 만들기 — 이번 대본의 가장 중요한 규칙] 아래 원본 영상 '장면 설계도'의 장면 순서·상황·인물 관계·감정선·후킹·반전·결말을 그대로 따라간다. "
+            "원본 장면 1개 = 우리 컷 1개가 되도록 맞추고, 원본 장면이 정해진 컷 수보다 많으면 비슷한 장면을 합치고, 적으면 반응·표정 컷을 끼워 컷 수를 맞춘다. "
+            "대사는 원본과 '같은 뜻'이지만 완전히 다른 우리말 문장으로 새로 쓴다 — 원본 문장·표현·말버릇을 그대로 옮기면 유튜브가 재사용(복제) 콘텐츠로 보고 수익을 막는다. "
+            "인물 이름·얼굴·옷·장소·소품은 새로 정한다(원본 배우와 닮게 묘사 금지). "
+            "채널 규칙 중 '이야기 소재·무대·주인공' 규칙보다 원본 흐름이 우선이고, '형식' 규칙(컷 구성·대사 길이·나레이션 길이·화면 원칙·금지어·제목 규칙)은 그대로 지킨다.\n"
+            + (f"[바꿀 인물 — 원본 인물을 이렇게 바꿔 쓸 것] {cast}\n" if cast.strip() else "")
+            + "[원본 영상 장면 설계도]")
+
+
+def write_script(cfg, channel, analysis="", topic="", follow=False, cast=""):
     if channel.get("format") == "longform":
-        data = _write_long(cfg, channel, analysis, topic)
+        data = _write_long(cfg, channel, analysis, topic, ref_rule=follow_rule(cast) if follow and analysis else REF_NORMAL_LONG)
     else:
         prompt = SCRIPT_PROMPT.format(
             name=channel["name"], rules="\n".join("- " + r for r in channel["rules"]),
+            ref_rule=follow_rule(cast) if follow and analysis else REF_NORMAL,
             analysis=analysis or "(분석 없음)", topic=topic or "(자유 주제)", ncuts=channel["cuts"])
         try:
             data = _json_from(_claude(cfg, prompt, max_tokens=16000))
