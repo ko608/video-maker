@@ -376,18 +376,21 @@ if page == "① 분석·대본":
                 "마지막 컷 나레이션 마무리 문장 규칙은 그대로 지킨다."]
     url = st.text_input("잘 되는 영상 유튜브 링크 (없으면 비워 두고 아래 주제만 써도 됩니다)")
     use = st.radio("🔗 링크 영상을 어떻게 쓸까요?",
-                   ["🎭 따라 만들기 — 같은 상황·흐름 그대로, 인물·대사만 바꾸기",
+                   ["🎭 따라 만들기 — 원본 형식(사람 수·장면 수·길이) 그대로, 주제만 바꾸기",
                     "🧩 참고만 — 구조·리듬만 빌려서 새 이야기"],
                    key="link_use", help="따라 만들기: 조회수 터진 상황극을 장면 순서대로 따라가되 대사는 같은 뜻의 새 문장으로 써요 (그대로 베끼면 유튜브가 재사용 콘텐츠로 막아요)")
     follow = use.startswith("🎭")
     cast = ""
     if follow:
         CASTS = {
-            "원본 역할 그대로 (얼굴·이름·옷만 새로)": "",
-            "오늘이 선녀 등장 — 상담·조언해 주는 사람 역할": "원본에서 상담·조언·정체 공개·해결을 맡는 인물을 '오늘이 선녀'로 바꾼다 — 30대 후반의 단정하고 품위 있는 평범한 한국 여성(연예인 같지 않은 일반인 얼굴), 연분홍 저고리에 진분홍 치마 한복, 단정하게 쪽진 머리, 차분하고 따뜻한 눈빛과 또렷한 말투. 사주·운세 이야기로 상황을 풀어 준다. 나머지 인물은 원본 역할 그대로 얼굴·옷만 새로.",
+            "원본 출연자 그대로 (얼굴·옷만 새로)": "",
+            "오늘이 선녀로 — 원본 주인공(혼자 말하는 영상이면 그 한 사람)을 오늘이 선녀로": "원본의 주인공(혼자 카메라 보고 말하는 영상이면 그 한 사람, 상황극이면 상담·조언·해결을 맡는 사람)을 '오늘이 선녀'로 바꾼다 — 30대 후반의 단정하고 품위 있는 평범한 한국 여성(연예인 같지 않은 일반인 얼굴), 연분홍 저고리에 진분홍 치마 한복, 단정하게 쪽진 머리, 차분하고 따뜻한 눈빛과 또렷한 말투. 사주·운세 이야기로 상황을 풀어 준다. 나머지 인물은 원본 역할 그대로 얼굴·옷만 새로.",
             "직접 쓰기": None,
         }
-        cpick = st.selectbox("🎭 바꿀 인물", list(CASTS), key="cast_pick")
+        new_topic = st.text_input("📝 바꿀 주제 (형식은 원본 그대로, 내용만 이 주제로)", key="follow_topic",
+                                  placeholder="예: 2027년 말띠 운세 / 이름에 이 글자 있으면 재물운 / 궁합 안 좋은 띠")
+        st.caption("따라 만들기에서는 위의 '구성·쇼츠 길이' 선택은 쓰지 않고 원본 영상 길이·장면 수를 그대로 따라가요.")
+        cpick = st.selectbox("🎭 출연자", list(CASTS), key="cast_pick")
         cast = CASTS[cpick] if CASTS[cpick] is not None else st.text_input(
             "누구를 누구로 바꿀까요?", key="cast_text",
             placeholder="예: 식당 사장 → 60대 국밥집 할머니(초록 앞치마) / 진상 손님 → 40대 남자(남색 점퍼)")
@@ -414,6 +417,9 @@ if page == "① 분석·대본":
                          placeholder="예: 시어머니가 며느리 몰래 들어 둔 보험. / 또는 붕어빵 시리즈 줄거리 전체",
                          height=160, key="topic_box")
 
+    wtopic = topic   # 대본 쓸 때 넘길 주제 (따라 만들기면 '바꿀 주제'를 앞에)
+    if follow and st.session_state.get("follow_topic", "").strip():
+        wtopic = st.session_state["follow_topic"].strip() + ("\n" + topic if topic.strip() else "")
     c1, c2 = st.columns(2)
     if c1.button("🔍 분석하고 대본 만들기", type="primary", width="stretch"):
         log = Log()
@@ -425,7 +431,7 @@ if page == "① 분석·대본":
                 st.session_state["analysis"] = analysis
                 st.session_state["analysis_follow"] = follow
             log("우리식 대본 쓰는 중… (1분 안팎)" if not (follow and url.strip()) else "같은 흐름으로 인물·대사 바꿔 쓰는 중… (1분 안팎)")
-            st.session_state["draft"] = ai.write_script(cfg, ch, analysis, topic, follow=follow and bool(url.strip()), cast=cast)
+            st.session_state["draft"] = ai.write_script(cfg, ch, analysis, wtopic, follow=follow and bool(url.strip()), cast=cast)
             st.session_state["draft_channel"] = ch["id"]
             log("완료! 아래에서 확인하고 고친 뒤 저장하세요.")
         except Exception as e:
@@ -433,7 +439,7 @@ if page == "① 분석·대본":
     if c2.button("🔁 대본만 다시 쓰기", width="stretch"):
         try:
             with st.spinner("다시 쓰는 중…"):
-                st.session_state["draft"] = ai.write_script(cfg, ch, st.session_state.get("analysis", ""), topic,
+                st.session_state["draft"] = ai.write_script(cfg, ch, st.session_state.get("analysis", ""), wtopic,
                                                             follow=follow and st.session_state.get("analysis_follow", False), cast=cast)
         except Exception as e:
             st.error(f"오류: {e}")

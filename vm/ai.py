@@ -127,6 +127,12 @@ FOLLOW_PROMPT = """당신은 한국 유튜브 쇼츠 상황극 분석가입니�
 아래 형식의 한국어 '장면 설계도'를 써 주세요. 60대도 읽기 쉬운 말로, 시간은 "0:07"처럼 표시하세요.
 
 ## 한 줄 요약 (누가, 무슨 상황에서, 무엇이 뒤집혀, 어떻게 끝나나)
+## 형식 (아주 정확하게 — 이대로 다시 찍습니다)
+- 영상 종류: ① 혼자 카메라 보고 말하는 설명·이야기 영상 / ② 두 사람 이상이 대화하는 상황극 / ③ 그림·화면 위 나레이션 / ④ 섞임 — 중 하나
+- 화면에 나오는 사람 수: 몇 명 (말하는 사람 몇 명)
+- 전체 길이: 몇 초
+- 장면(컷) 수: 몇 개 — 장면 하나는 화면이 바뀌는 단위
+- 자막·글자 화면 특징
 ## 왜 조회수가 터졌나 (3가지)
 ## 등장인물 (역할 — 나이대·성별 — 성격·말투 — 이야기에서 맡은 일)
 ## 첫 3초 후킹 (무슨 장면·말로 붙잡았나)
@@ -295,25 +301,33 @@ REF_NORMAL = "[참고: 잘 된 영상 분석 — 구조와 리듬만 참고하�
 REF_NORMAL_LONG = "[참고: 잘 된 영상 분석 — 구조와 리듬만 참고]"
 
 
-def follow_rule(cast=""):
-    """'따라 만들기' — 원본 상황극의 흐름은 그대로, 인물·대사는 새로"""
-    return ("[따라 만들기 — 이번 대본의 가장 중요한 규칙] 아래 원본 영상 '장면 설계도'의 장면 순서·상황·인물 관계·감정선·후킹·반전·결말을 그대로 따라간다. "
-            "원본 장면 1개 = 우리 컷 1개가 되도록 맞추고, 원본 장면이 정해진 컷 수보다 많으면 비슷한 장면을 합치고, 적으면 반응·표정 컷을 끼워 컷 수를 맞춘다. "
-            "대사는 원본과 '같은 뜻'이지만 완전히 다른 우리말 문장으로 새로 쓴다 — 원본 문장·표현·말버릇을 그대로 옮기면 유튜브가 재사용(복제) 콘텐츠로 보고 수익을 막는다. "
-            "인물 이름·얼굴·옷·장소·소품은 새로 정한다(원본 배우와 닮게 묘사 금지). "
-            "채널 규칙 중 '이야기 소재·무대·주인공' 규칙보다 원본 흐름이 우선이고, '형식' 규칙(컷 구성·대사 길이·나레이션 길이·화면 원칙·금지어·제목 규칙)은 그대로 지킨다.\n"
-            + (f"[바꿀 인물 — 원본 인물을 이렇게 바꿔 쓸 것] {cast}\n" if cast.strip() else "")
+def follow_rule(cast="", topic=""):
+    """'따라 만들기' — 원본 형식·흐름은 그대로, 주제(와 인물)만 바꿈"""
+    return ("[따라 만들기 — 이번 대본의 가장 중요한 규칙, 다른 모든 규칙보다 우선] 아래 원본 영상을 '형식 그대로' 다시 찍는다. 바꾸는 것은 주제뿐이다.\n"
+            "1) 형식 그대로: 원본의 영상 종류·화면에 나오는 사람 수·말하는 사람 수·장면 수·전체 길이를 똑같이 맞춘다. "
+            "원본이 혼자 카메라 보고 말하는 영상이면 우리도 그 한 사람만 나온다 — 상대역·손님·가족 등 다른 인물을 절대 추가하지 않고, 모든 컷의 visual에 그 한 사람만 쓴다. "
+            "원본이 두 사람 대화면 두 사람만. 카메라를 보고 말하는 장면은 kind \"video\"(그 사람이 말하는 대사 영상), 그림·화면 위에 목소리만 나오는 장면은 kind \"image\"(나레이션).\n"
+            "2) 흐름 그대로: 원본 장면 1개 = 우리 컷 1개. 장면 순서·말의 구성(후킹 → 설명 → 반전 → 마무리 등)·감정·카메라 구도를 그대로 따른다.\n"
+            "3) 주제만 바꾼다: " + (f"[바꿀 주제] {topic}" if topic.strip() else "원본과 같은 형식으로 우리 채널 분야에 맞는 새 주제") + " — 원본 말의 '틀'에 새 주제 내용을 채운다. "
+            "대사는 원본 문장·표현을 그대로 옮기지 말고 새 주제에 맞게 새로 쓴다(그대로 베끼면 유튜브가 재사용 콘텐츠로 수익을 막음). 얼굴·옷·장소는 새로 정한다(원본 출연자와 닮게 묘사 금지).\n"
+            "4) 아래 [채널 규칙]의 컷 구성(6컷, 1·3·5컷 영상 등)·컷 수·등장인물·이야기 소재 규칙과, 화면 원칙 중 '상대'·'두 사람' 이야기는 이번에는 무시한다. 대사 길이·금지어·제목 규칙만 지킨다.\n"
+            + (f"[출연자 — 원본 출연자를 이렇게 바꿔 쓸 것] {cast}\n" if cast.strip() else "")
             + "[원본 영상 장면 설계도]")
 
 
 def write_script(cfg, channel, analysis="", topic="", follow=False, cast=""):
     if channel.get("format") == "longform":
-        data = _write_long(cfg, channel, analysis, topic, ref_rule=follow_rule(cast) if follow and analysis else REF_NORMAL_LONG)
+        data = _write_long(cfg, channel, analysis, topic, ref_rule=follow_rule(cast, topic) if follow and analysis else REF_NORMAL_LONG)
     else:
+        if follow and analysis:   # 따라 만들기: 이번 길이·올영상 구성 규칙은 빼고 원본 형식을 따름
+            channel = dict(channel, rules=[r for r in channel["rules"] if not r.startswith(("[올영상 구성", "[이번 길이"))])
         prompt = SCRIPT_PROMPT.format(
             name=channel["name"], rules="\n".join("- " + r for r in channel["rules"]),
-            ref_rule=follow_rule(cast) if follow and analysis else REF_NORMAL,
+            ref_rule=follow_rule(cast, topic) if follow and analysis else REF_NORMAL,
             analysis=analysis or "(분석 없음)", topic=topic or "(자유 주제)", ncuts=channel["cuts"])
+        if follow and analysis:
+            prompt = prompt.replace(f"cuts는 정확히 {channel['cuts']}개, 규칙의 컷 구성을 따르세요.",
+                                    "cuts 개수와 컷 종류(video/image)는 원본 장면 설계도의 장면 수·형식과 똑같이 맞추세요(최대 24개). 정해진 컷 구성은 무시.")
         try:
             data = _json_from(_claude(cfg, prompt, max_tokens=16000))
         except Exception:
