@@ -58,7 +58,9 @@ def wav_seconds(path):
 
 # ---------------- 자막 ----------------
 def split_chunks(text, limit=13):
-    """자막을 한 줄 13자 안팎으로 자름 (띄어쓰기 기준)."""
+    """자막을 한 줄 13자 안팎으로 자름 (띄어쓰기 기준). 줄바꿈(주고받는 대사)은 꼭 새 자막으로."""
+    if "\n" in (text or "").strip():
+        return [c for part in text.strip().split("\n") for c in split_chunks(part, limit)]
     text = re.sub(r"\s+", " ", (text or "").strip())
     if not text:
         return []

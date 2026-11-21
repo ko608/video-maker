@@ -353,13 +353,13 @@ if page == "① 분석·대본":
         secs = st.radio("⏱ 쇼츠 길이", ["약 60초", "약 90초", "약 120초"], horizontal=True)
         allv = mode.startswith("올영상")
         sec_n = {"약 60초": 60, "약 90초": 90, "약 120초": 120}[secs]
-        n = round(sec_n / 5) if allv else sec_n // 10
+        n = round(sec_n / 8) if allv else sec_n // 10   # 올영상은 컷마다 8초
         if allv:
             ch["cuts"] = n
             twist = round(n * 2 / 3)
             ch["rules"] = list(ch["rules"]) + [
                 f"[올영상 구성 — 위 규칙보다 우선] 전체 {n}컷 모두 kind \"video\"(대사 영상). 그림+나레이션 컷과 narration은 쓰지 않는다 — 이야기는 오직 인물들의 대사로만 전한다. "
-                "대사는 컷마다 15~30자(4~6초), 결정적인 한마디만 40자 이내(8초). 두 사람 이상이 주고받게 — 말 → 상대의 반응 대사 → 다시 말, 한 사람이 연달아 길게 말하지 않는다. "
+                "대사 컷은 모두 8초 — 컷마다 대사를 띄어쓰기 포함 30~42자로 넉넉히. 한 컷 안에서 두 사람이 주고받아도 된다(line=먼저 말하는 사람, line2=받아치는 사람, speaker2·speaker2_en). 두 사람 이상이 주고받게 — 말 → 상대의 반응 → 다시 말, 한 사람이 연달아 길게 말하지 않는다. "
                 "1컷은 갈등이 바로 터지는 첫마디(설명 금지). 이야기의 열쇠 물건·음식(봉투, 국밥, 앞치마 등)이 대사와 화면에 반복해 나온다. "
                 f"작은 반전·의문은 3~4컷마다, 큰 반전은 {twist}컷 무렵 한마디로 터뜨린다. "
                 f"[결말은 꼭 보여 줄 것] 반전 뒤 마지막 3~4컷({n - 3}~{n}컷)은 '결과'를 보여 준다: ① 숨은 이유·진실이 드러나는 결정적 한마디 ② 그 말을 들은 사람의 감정 반응(눈물·웃음·놀람) ③ 이야기의 열쇠 물건·음식이 다시 나오며 상황이 바뀐 모습(예: 새 식권을 건네받음, 함께 국밥을 먹음) ④ 여운이 남는 마무리 한마디. "
@@ -611,13 +611,17 @@ if page == "② 재료 만들기":
                             continue
                         log(f"컷 {no}: 대사 영상 만드는 중 (1~3분)")
                         # 대사·말하는 사람을 맨 앞에 못 박기 (컷마다 대사가 같아지거나 엉뚱한 사람이 말하는 것 방지)
-                        vprompt = (f"DIALOGUE — the ONLY words spoken in this clip, in Korean, exactly once, word for word: "
+                        two = bool((c.get("line2") or "").strip())
+                        vprompt = (f"DIALOGUE — the ONLY words spoken in this 8-second clip, in Korean, exactly once, word for word: "
                                    f"\"{c['line']}\". "
-                                   f"SPEAKER: {c.get('speaker_en') or c.get('speaker','')}. Only this person moves their lips "
-                                   "and speaks; every other person stays completely silent with mouth closed. "
+                                   f"SPEAKER: {c.get('speaker_en') or c.get('speaker','')}. "
+                                   + (f"Then the other person replies, word for word: \"{c['line2']}\". SECOND SPEAKER: {c.get('speaker2_en') or c.get('speaker2','')}. "
+                                      "Only these two people speak, one after the other, never at the same time; everyone else stays silent. "
+                                      if two else "Only this person moves their lips and speaks; every other person stays completely silent with mouth closed. ") +
                                    "Do not add any other lines. "
                                    f"Scene {no}: {c['visual']}. Characters: {data.get('characters','')}. {style}. "
-                                   "Tight close-up on the speaker's face (face fills most of the frame, eyes sharp). Natural lip sync, no background music, no subtitles, no text on screen.")
+                                   + ("Over-the-shoulder two-shot, both faces clearly visible and close, " if two else "Tight close-up on the speaker's face (face fills most of the frame, eyes sharp). ")
+                                   + "Natural lip sync, no background music, no subtitles, no text on screen.")
                         ai.make_video(dict(cfg, video_seconds=ai.video_seconds_for(c.get("line"))), soften(vprompt), p / "재료" / f"{no:02d}.mp4", first_frame=still, aspect=aspect, log=log)
                 except Exception as e:
                     log(f"컷 {no} 실패: {e}")
@@ -625,10 +629,10 @@ if page == "② 재료 만들기":
         st.divider()
 
         # ---- 플로우(무료) 한 번에: 전체 문구 + 한꺼번에 올리기 ----
-        short_ = [int(c["no"]) for c in data["cuts"] if c["kind"] == "video" and 0 < len((c.get("line") or "").strip()) < 15]
+        short_ = [int(c["no"]) for c in data["cuts"] if c["kind"] == "video" and 0 < len(ai.full_line(c)) < ai.SHORT_LINE]
         if short_:
-            st.warning(f"대사 컷 {short_} 의 대사가 15자보다 짧아서 4초 영상에 빈 시간이 남아요.")
-            if st.button("✍️ 짧은 대사를 15~20자로 늘리기 (뜻은 그대로, 몇 원)"):
+            st.warning(f"대사 컷 {short_} 의 대사가 {ai.SHORT_LINE}자보다 짧아서 8초 영상에 빈 시간이 남아요.")
+            if st.button("✍️ 짧은 대사를 30~42자로 늘리기 (뜻은 그대로, 주고받기로도, 몇 원)"):
                 try:
                     with st.spinner("대사 늘리는 중…"):
                         ai.fix_short_lines(cfg, data)
@@ -758,7 +762,9 @@ if page == "② 재료 만들기":
             if only_missing and cut_file(p, int(c["no"])):
                 continue
             if c["kind"] == "video":
-                vid_lines.append(f"[v{int(c['no']):02d}] {ai.video_seconds_for(c.get('line'))}초 영상, {c.get('speaker_en') or c.get('speaker','')} 말함: \"{c['line']}\" / 장면: {c['visual']}")
+                vid_lines.append(f"[v{int(c['no']):02d}] 8초 영상, {c.get('speaker_en') or c.get('speaker','')} 말함: \"{c['line']}\""
+                                 + (f" → 이어서 {c.get('speaker2_en') or c.get('speaker2','상대')} 대답: \"{c['line2']}\"" if (c.get('line2') or '').strip() else "")
+                                 + f" / 장면: {c['visual']}")
             else:
                 tagf = (lambda sl_: f"c{seq_no(data, sl_):02d}") if seqm else (lambda sl_: f"c{int(str(sl_).split('-')[0]):02d}" + (f"-{str(sl_).split('-')[1]}" if "-" in str(sl_) else ""))
                 lines_all.append(f"[{tagf(int(c['no']))}] 장면(일렬 전신 금지): {c['visual']}")
@@ -1083,12 +1089,14 @@ if page == "② 재료 만들기":
                 l.markdown(f"**🔢 영상 번호:** `v{no:02d}`")
             if c.get("chapter"):
                 l.markdown(f"**📖 {c['chapter']}**")
-            l.write(c.get("line") or c.get("narration", ""))
+            l.write(ai.sub_text(c).replace("\n", "  \n") if c["kind"] == "video" else c.get("narration", ""))
             if c["kind"] == "video":
                 # 플로우 영상은 짧게 — 시작 그림이 인물·배경을 이미 담고 있음 (긴 문구는 거절되기 쉬움)
                 flow = (f"첨부한 시작 그림에서 이어지는 {ratio_ko} {ai.video_seconds_for(c.get('line'))}초 영상. {c['visual']}\n"
-                        f"{c.get('speaker','')} 말함: \"{c['line']}\"\n"
-                        "다른 사람은 말하지 않음. 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷), 상대는 뒤에 흐리게. "
+                        f"{ai.dialog_ko(c)}\n"
+                        + ("두 사람만 차례로 말하고(동시에 말하지 않음) 다른 사람은 말하지 않음. 어깨 너머 투샷으로 두 얼굴이 가깝고 또렷하게. "
+                           if (c.get('line2') or '').strip() else
+                           "다른 사람은 말하지 않음. 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷), 상대는 뒤에 흐리게. ") +
                         f"시작 그림과 같은 그림체({art_style(cfg)[1].split('(')[0]}), 밝고 환한 분위기, 자막 없이.")
             else:
                 _t = (lambda sl_: f"c{seq_no(data, sl_):02d}") if data.get("naming") == "seq" else (lambda sl_: f"컷 {sl_} 장면")
@@ -1220,11 +1228,16 @@ if page == "③ 완성 영상":
                     edits[no] = st.text_area(f"컷 {no} 나레이션", c.get("narration", ""), height=100, key=f"nar_{p.name}_{no}")
                 else:
                     edits[no] = st.text_input(f"컷 {no} 대사 자막", c.get("line", ""), key=f"line_{p.name}_{no}")
+                    if (c.get("line2") or "").strip():
+                        edits[f"{no}b"] = st.text_input(f"컷 {no} 받아치는 대사 자막", c.get("line2", ""), key=f"line2_{p.name}_{no}")
             if st.button("💾 고친 글 저장", key="save_text"):
                 changed = []
                 for c in data["cuts"]:
                     no = int(c["no"])
                     field = "narration" if c["kind"] == "image" else "line"
+                    if f"{no}b" in edits and edits[f"{no}b"] != c.get("line2", ""):
+                        c["line2"] = edits[f"{no}b"]
+                        changed.append(no)
                     if edits[no] != c.get(field, ""):
                         c[field] = edits[no]
                         changed.append(no)
@@ -1293,7 +1306,7 @@ if page == "③ 완성 영상":
                             wav = p / "work" / f"v_{cfg.get('tts_voice','Kore')}_{no:02d}.wav"
                             (p / "work").mkdir(exist_ok=True)
                             audio = wav if wav.exists() else None
-                    cuts.append(dict(media=media, audio=audio, text=c.get("line") or c.get("narration", ""),
+                    cuts.append(dict(media=media, audio=audio, text=ai.sub_text(c) if c["kind"] == "video" else c.get("narration", ""),
                                      extras=[str(x) for x in extra_files(p, no)] if c["kind"] == "image" else []))
                 assemble.set_format(fmt)
                 if any(c["kind"] == "video" for c in data["cuts"]):
@@ -1350,7 +1363,7 @@ if page == "⚙️ 설정":
     with st.expander("모델 이름 (보통은 그대로 두세요)"):
         for k in ["claude_model", "gemini_text_model", "gemini_image_model", "gemini_tts_model", "veo_model"]:
             new[k] = st.text_input(k, cfg[k])
-        new["video_seconds"] = st.selectbox("대사 영상 길이(초)", [4, 6, 8], index=[4, 6, 8].index(int(cfg["video_seconds"])))
+        new["video_seconds"] = 8   # 대사 영상은 모두 8초 (플로우에서 4초·6초는 만들어지지 않음)
     names_ = list(ART_STYLES)
     new["art_style"] = st.radio("🎨 그림 느낌", names_, horizontal=True,
                                 index=names_.index(cfg.get("art_style", "반실사 일러스트")) if cfg.get("art_style", "반실사 일러스트") in names_ else 0)

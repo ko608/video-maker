@@ -180,7 +180,7 @@ SCRIPT_PROMPT = """당신은 조회수가 잘 나오는 한국 유튜브 스토�
  "music_mood": "배경음악 분위기 한 줄",
  "characters": "등장인물 외모 설명(영어, 모든 장면에서 같은 사람으로 보이게): 나이·머리·옷 — 실제 나이보다 5~10살 젊어 보이게, 단정하고 깨끗한 옷 — 옷은 인물마다 서로 겹치지 않는 또렷하고 선명한 한 가지 대표 색(예: 엄마 진분홍 카디건, 아들 쨍한 파란 셔츠, 며느리 노란 니트, 사장님 초록 앞치마; 회색·베이지·검정 같은 흐린 색 금지)을 정해 끝까지 같은 옷",
  "cuts": [
-  {{"no": 1, "kind": "video", "line": "대사(따옴표 없이, 띄어쓰기 포함 15~50자 — 15~20자=4초, ~30자=6초, ~40자=8초, ~50자=10초 영상)", "speaker": "누가 누구에게", "speaker_en": "English: ONLY the person who speaks + look, e.g. the daughter-in-law (woman in her 30s, ponytail, beige cardigan)", "narration": "", "visual": "영어 장면 묘사: 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채움, 눈동자까지 또렷), 상대는 뒤에 작고 흐리게"}},
+  {{"no": 1, "kind": "video", "line": "대사(따옴표 없이 — 8초 영상, 띄어쓰기 포함 30~42자. 두 사람이 주고받으면 먼저 말하는 사람 몫만)", "speaker": "누가 누구에게", "speaker_en": "English: ONLY the person who speaks + look, e.g. the daughter-in-law (woman in her 30s, ponytail, beige cardigan)", "line2": "(선택) 같은 8초 안에 상대가 받아치는 대사 — 없으면 빈칸. line+line2 합쳐 30~42자", "speaker2": "(line2가 있을 때) 받아치는 사람", "speaker2_en": "(line2가 있을 때) English: the second speaker + look", "narration": "", "visual": "영어 장면 묘사: 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채움, 눈동자까지 또렷), 상대는 뒤에 작고 흐리게"}},
   {{"no": 2, "kind": "image", "line": "", "speaker": "", "narration": "나레이션 90~130자", "visual": "영어: 나레이션 앞부분 내용에 맞는 화면", "shots": ["영어: 나레이션 가운데 내용에 맞는 화면(그 사람의 반응 얼굴 또는 그 순간의 음식·물건)", "영어: 나레이션 끝부분 내용에 맞는 화면"]}}
  ]
 }}
@@ -222,7 +222,7 @@ LONG_SCRIPT_PROMPT = """당신은 시청자가 20~30분 동안 한 번도 넘기
  "music_mood": "배경음악 분위기 한 줄",
  "characters": "등장인물 외모 설명(영어, 모든 장면에서 같은 사람으로 보이게): 이름·나이·머리·옷 (실제 나이보다 5~10살 젊어 보이게, 깔끔하고 단정하게, 깨끗한 옷 — 옷은 인물마다 서로 겹치지 않는 또렷하고 선명한 한 가지 대표 색(예: 엄마 진분홍 카디건, 아들 쨍한 파란 셔츠, 며느리 노란 니트, 사장님 초록 앞치마; 회색·베이지·검정 같은 흐린 색 금지)을 정해 끝까지 같은 옷)",
  "opening": [
-  {{"line": "첫 장면 대사(15~30자, 갈등이 바로 터지는 말)", "speaker": "누가 누구에게", "speaker_en": "English: ONLY the person who speaks — role + look, NO name (e.g. the new team leader, man in his 30s, grey suit)", "visual": "영어 드라마 장면: 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채움, 눈동자까지 또렷)"}}
+  {{"line": "첫 장면 대사(8초 영상, 30~42자, 갈등이 바로 터지는 말 — 주고받으면 먼저 말하는 사람 몫)", "line2": "(선택) 상대가 받아치는 말", "speaker2": "", "speaker2_en": "", "speaker": "누가 누구에게", "speaker_en": "English: ONLY the person who speaks — role + look, NO name (e.g. the new team leader, man in his 30s, grey suit)", "visual": "영어 드라마 장면: 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채움, 눈동자까지 또렷)"}}
  ],
  "chapters": [
   {{"title": "장 제목(짧게)", "cuts": [
@@ -230,7 +230,7 @@ LONG_SCRIPT_PROMPT = """당신은 시청자가 20~30분 동안 한 번도 넘기
   ]}}
  ]
 }}
-opening은 영상 맨 앞 '대사 영상' {nopen}개(각 4~6초) — 이야기의 가장 강렬한 갈등 순간을 먼저 보여 주고, 1장 나레이션이 '모든 일은 그날 아침부터 시작됐습니다'처럼 이어받게.
+opening은 영상 맨 앞 '대사 영상' {nopen}개(각 8초, 30~42자, 주고받기 가능) — 이야기의 가장 강렬한 갈등 순간을 먼저 보여 주고, 1장 나레이션이 '모든 일은 그날 아침부터 시작됐습니다'처럼 이어받게.
 chapters는 {nchap}개, 전체 cuts는 {ncuts}개 안팎(장마다 비슷하게). 장 안의 컷은 모두 kind "image"(대사 영상은 맨 앞 opening에만). 그림은 그 순간 이야기에 딱 맞는 장면으로.
 image 컷 나레이션은 200~260자를 꼭 지켜 전체 길이를 맞추세요(전체 나레이션 합계 = 목표 분 × 약 390자).
 대사(video) 컷은 말하는 사람 얼굴 클로즈업, 나레이션(image) 컷은 나레이션 내용에 딱 맞는 상대방의 반응이나 그 순간의 분위기(음식·물건·자리) — 엉뚱한 장면 금지. visual은 영화처럼 멀고 웅장한 화면이 아니라 '한국 TV 드라마' 화면처럼: 인물 중심, 대화하는 두 사람(투샷), 어깨 너머로 상대 얼굴(오버숄더), 말 듣는 사람의 반응 클로즈업, 음식 클로즈업. 멀리서 찍은 장면·풍경만 있는 장면 금지. [볼거리 원칙] 모든 그림에는 눈이 가는 볼거리가 하나 있어야 합니다: 감정이 터진 얼굴(눈물 고인 눈, 깜짝 놀란 눈, 떨리는 입술, 활짝 웃는 얼굴, 굳은 표정) 또는 이야기의 열쇠가 되는 물건·음식의 아주 가까운 클로즈업(김 나는 국밥, 꼭 쥔 낡은 봉투, 손목시계를 보는 손). 무표정하게 앉아 있는 사람, 사람 없는 빈 가게·부엌, 손님이 여럿 보이는 가게 전경은 쓰지 마세요. visual에 그 순간의 표정을 꼭 영어로 적으세요(e.g. eyes welling with tears, stunned wide eyes).
@@ -279,7 +279,8 @@ def _write_long(cfg, channel, analysis, topic, ref_rule=None):
     for o in data.get("opening", [])[:int(channel.get("opening_videos", 3))]:
         n += 1
         cuts.append({"no": n, "kind": "video", "chapter": "", "line": o.get("line", ""), "speaker": o.get("speaker", ""),
-                     "speaker_en": o.get("speaker_en", ""), "narration": "", "visual": o.get("visual", "")})
+                     "speaker_en": o.get("speaker_en", ""), "line2": o.get("line2", ""), "speaker2": o.get("speaker2", ""),
+                     "speaker2_en": o.get("speaker2_en", ""), "narration": "", "visual": o.get("visual", "")})
     first_chapter = True
     for ch in data.get("chapters", []):
         for i, c in enumerate(ch.get("cuts", [])):
@@ -340,7 +341,7 @@ def write_script(cfg, channel, analysis="", topic="", follow=False, cast=""):
                 cont = _json_from(_claude(cfg, "아래는 대사로만 이어지는 쇼츠 드라마 대본입니다. 컷이 모자라 결말이 빠졌어요.\n"
                     + "\n".join(f"{c.get('no')}. {c.get('speaker','')}: {c.get('line','')}" for c in have)
                     + f"\n\n등장인물: {data.get('characters','')}\n이어서 {need}컷을 더 써서 결말을 완성하세요: 숨은 이유가 드러나는 결정적 한마디 → 상대의 감정 반응 → 열쇠 물건·음식이 다시 나오며 바뀐 모습 → 여운 있는 마무리 한마디. "
-                    + "앞 컷과 같은 형식(kind \"video\", speaker, speaker_en, line 15~30자, visual 영어)으로, 아래 JSON 하나만: {\"cuts\": [...]}", max_tokens=4000))
+                    + "앞 컷과 같은 형식(kind \"video\", speaker, speaker_en, line 30~42자(8초, 주고받으면 line2·speaker2·speaker2_en도), visual 영어)으로, 아래 JSON 하나만: {\"cuts\": [...]}", max_tokens=4000))
                 for c in cont.get("cuts", [])[:need]:
                     c["kind"] = "video"; c["no"] = len(have) + 1; have.append(c)
                 data["cuts"] = have
@@ -375,6 +376,8 @@ def write_script(cfg, channel, analysis="", topic="", follow=False, cast=""):
         pass
     for c in data.get("cuts", []):
         c["line"] = soften(c.get("line", ""))
+        if c.get("line2"):
+            c["line2"] = soften(c["line2"])
         c["visual"] = soften(c.get("visual", ""))
         c["shots"] = [soften(x) for x in (c.get("shots") or [])][:2]
     return data
@@ -464,31 +467,57 @@ def expand_long(cfg, data, minutes, rules=None, log=print):
     return mapping
 
 
+def full_line(c):
+    """대사 전체 (주고받기면 두 사람 대사를 이어서)"""
+    return ((c.get("line") or "").strip() + (" " + c["line2"].strip() if (c.get("line2") or "").strip() else "")).strip()
+
+
+def sub_text(c):
+    """자막용: 주고받기면 두 줄"""
+    return (c.get("line") or "").strip() + ("\n" + c["line2"].strip() if (c.get("line2") or "").strip() else "")
+
+
+def dialog_ko(c):
+    """플로우 문구용 대사 줄"""
+    t = f"{c.get('speaker', '')} 말함: \"{c.get('line', '')}\""
+    if (c.get("line2") or "").strip():
+        t += f" → 이어서 {c.get('speaker2', '') or '상대'} 대답: \"{c['line2']}\""
+    return t
+
+
+SHORT_LINE = 28   # 8초 영상에 이보다 짧으면 빈 시간이 남음
+
+
 def fix_short_lines(cfg, data):
-    """15자보다 짧은 대사를 뜻은 그대로 두고 15~20자로 늘림 (4초 영상에 빈 시간이 안 남게)"""
-    short = [c for c in data.get("cuts", []) if c.get("kind") == "video" and 0 < len((c.get("line") or "").strip()) < 15]
+    """짧은 대사를 뜻은 그대로 두고 30~42자로 늘림 (8초 영상에 빈 시간이 안 남게)"""
+    short = [c for c in data.get("cuts", []) if c.get("kind") == "video" and 0 < len(full_line(c)) < SHORT_LINE]
     if not short:
         return data
-    items = {str(c["no"]): {"line": c["line"], "speaker": c.get("speaker", "")} for c in short}
-    prompt = ("아래 영상 대사들이 너무 짧아서 4초 영상에 빈 시간이 남습니다. 뜻·말투·감정은 그대로 두고, "
-              "띄어쓰기 포함 15~20자가 되게 자연스럽게 늘려 주세요(말끝을 흐리거나 상대를 부르는 말, 한마디 덧붙이기 등). "
+    items = {str(c["no"]): {"line": c.get("line", ""), "line2": c.get("line2", ""), "speaker": c.get("speaker", ""), "speaker2": c.get("speaker2", "")} for c in short}
+    prompt = ("아래 영상 대사들이 8초 영상에 비해 너무 짧아서 빈 시간이 남습니다. 뜻·말투·감정은 그대로 두고, "
+              "line과 line2(있으면)를 합쳐 띄어쓰기 포함 30~42자가 되게 자연스럽게 늘려 주세요. 한 사람 대사면 한마디 덧붙이고, "
+              "상대가 받아치는 말(line2)을 새로 넣어 주고받게 만들어도 됩니다(그때 speaker2도). "
               "돈·병원·내놔 같은 격한 말은 쓰지 마세요.\n" + json.dumps(items, ensure_ascii=False) +
-              '\nJSON 하나만: {"컷번호": "늘린 대사", ...}')
+              '\nJSON 하나만: {"컷번호": {"line": "...", "line2": "", "speaker2": ""}, ...}')
     try:
-        out = _json_from(_claude(cfg, prompt, max_tokens=1500))
+        out = _json_from(_claude(cfg, prompt, max_tokens=2000))
         for c in short:
-            new = str(out.get(str(c["no"]), "")).strip().strip('"')
-            if 15 <= len(new) <= 30:
-                c["line"] = new
+            o = out.get(str(c["no"])) or {}
+            if isinstance(o, str):
+                o = {"line": o}
+            new = {"line": str(o.get("line", "")).strip().strip('"'), "line2": str(o.get("line2", "")).strip().strip('"')}
+            if new["line"] and SHORT_LINE <= len((new["line"] + " " + new["line2"]).strip()) <= 50:
+                c["line"], c["line2"] = new["line"], new["line2"]
+                if new["line2"] and o.get("speaker2"):
+                    c["speaker2"] = str(o["speaker2"])
     except Exception:
         pass
     return data
 
 
-def video_seconds_for(line):
-    """대사 글자 수 → 영상 길이 (15~20자 4초, ~30자 6초, ~40자 8초, 그 이상 10초)"""
-    n = len((line or "").strip())
-    return 4 if n <= 20 else 6 if n <= 30 else 8 if n <= 40 else 10
+def video_seconds_for(line=None):
+    """대사 영상은 모두 8초 (플로우에서 4초·6초는 만들어지지 않음)"""
+    return 8
 
 
 # ---------------- 2-0. 대표님이 쓴 대본 그대로 → 컷 나누기 ----------------
@@ -711,7 +740,7 @@ def make_video(cfg, prompt, out_path, first_frame=None, aspect="9:16", log=print
     for m in models:
         kw = dict(model=m, prompt=prompt,
                   config=types.GenerateVideosConfig(aspect_ratio=aspect,
-                                                    duration_seconds=int(cfg.get("video_seconds", 4)),
+                                                    duration_seconds=int(cfg.get("video_seconds", 8)),
                                                     number_of_videos=1))
         if img is not None:
             kw["image"] = img
@@ -745,7 +774,7 @@ def _omni_video(client, cfg, prompt, first_frame, out_path, aspect, log):
     model = cfg.get("omni_model") or "gemini-omni-1.1-flash"
     if not hasattr(client, "interactions"):
         raise RuntimeError("구글 프로그램(google-genai)이 옛 버전이에요. 실행하기.bat으로 다시 켜면 새로 받아요.")
-    text = prompt + f" About {int(cfg.get('video_seconds', 4))} seconds long, single continuous shot."
+    text = prompt + f" About {int(cfg.get('video_seconds', 8))} seconds long, single continuous shot."
     if first_frame and Path(first_frame).exists():
         mime = "image/png" if str(first_frame).lower().endswith(".png") else "image/jpeg"
         b64 = base64.b64encode(Path(first_frame).read_bytes()).decode()

@@ -34,7 +34,7 @@ DEFAULTS = {
     "music_volume": 0.35,   # 배경음악 음량 (0~1). 나레이션이 나올 땐 자동으로 더 작아집니다
     "subtitle_size": 76,
     "subtitle_y": 0.55,     # 자막 높이 (0=맨 위, 1=맨 아래). 쇼츠는 화면 중간쯤
-    "video_seconds": 4,
+    "video_seconds": 8,
     "image_size": "2K",
     "brighten": 2,          # 완성 영상 밝기 보정 (0~10)
     "art_style": "반실사 일러스트",
