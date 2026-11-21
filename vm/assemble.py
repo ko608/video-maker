@@ -67,7 +67,11 @@ def split_chunks(text, limit=13):
     out, cur = [], ""
     for word in text.split(" "):
         if cur and len(cur) + 1 + len(word) > limit:
-            out.append(cur); cur = word
+            head, _, last = cur.rpartition(" ")
+            if head and len(last) == 1:          # '못', '목', '내' 같은 한 글자가 줄 끝에 홀로 남지 않게 다음 줄로
+                out.append(head); cur = last + " " + word
+            else:
+                out.append(cur); cur = word
         else:
             cur = (cur + " " + word).strip()
         if re.search(r"[.?!…]$", cur) and len(cur) >= 6:
