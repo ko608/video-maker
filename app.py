@@ -367,6 +367,10 @@ if page == "① 분석·대본":
                 f"컷 수는 반드시 {n}개 — 모자라게 쓰지 말 것. "
                 "화면은 말하는 사람 얼굴 클로즈업을 기본으로, 3~4컷에 한 번은 두 사람이 함께 보이는 허리 위 투샷이나 어깨 너머 샷, 반전 컷은 듣는 사람의 놀란 얼굴. "
                 "characters에는 인물마다 끝까지 바뀌지 않는 대표 옷·색·소품을 정해 적고(예: 연보라 니트, 남색 체크 셔츠), 반전 뒤에는 옷이나 소품 하나를 바꿔 변화를 보여 줄 수 있다(예: 남편이 앞치마를 두름)."]
+            if str(ch.get("id", "")).startswith("oneuli"):   # 오늘이 선녀 채널: 혼자 풀이·설명
+                ch["rules"].append("[오늘이 선녀 채널 — 위 올영상 규칙보다 우선] 모든 대사 컷은 오늘이 선녀 혼자 카메라를 보고 말한다 — 사연을 들려주고 사주로 풀어 설명. 상대역·주고받기·투샷·듣는 사람 반응 컷 없음(line2 비움). 컷마다 표정(안타까움·놀람·미소)과 큰 몸짓(부채 펼치기, 손바닥 펴 보이기, 몸 기울이기)을 바꿔 지루하지 않게.")
+            else:
+                ch["rules"].append("[인물 최소화] 등장인물은 2명(많아야 3명)으로.")
         elif n != ch.get("cuts", 6):
             ch["cuts"] = n
             twist = round(n * 2 / 3)
@@ -621,6 +625,7 @@ if page == "② 재료 만들기":
                                    "Do not add any other lines. "
                                    f"Scene {no}: {c['visual']}. Characters: {data.get('characters','')}. {style}. "
                                    + ("Over-the-shoulder two-shot, both faces clearly visible and close, " if two else "Tight close-up on the speaker's face (face fills most of the frame, eyes sharp). ")
+                                   + "Detailed facial acting: eyebrows, eyes and mouth corners change clearly with each emotion; big expressive gestures (open palms, leaning toward the camera, hand to mouth in surprise, pointing). "
                                    + "Natural lip sync, no background music, no subtitles, no text on screen.")
                         ai.make_video(dict(cfg, video_seconds=ai.video_seconds_for(c.get("line"))), soften(vprompt), p / "재료" / f"{no:02d}.mp4", first_frame=still, aspect=aspect, log=log)
                 except Exception as e:
@@ -1097,6 +1102,7 @@ if page == "② 재료 만들기":
                         + ("두 사람만 차례로 말하고(동시에 말하지 않음) 다른 사람은 말하지 않음. 어깨 너머 투샷으로 두 얼굴이 가깝고 또렷하게. "
                            if (c.get('line2') or '').strip() else
                            "다른 사람은 말하지 않음. 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷), 상대는 뒤에 흐리게. ") +
+                        "표정은 눈썹·눈빛·입꼬리까지 세밀하게 바뀌고, 손짓·몸짓은 크게(손바닥 펴 보이기, 몸을 앞으로 기울이기, 놀라 입 가리기). "
                         f"시작 그림과 같은 그림체({art_style(cfg)[1].split('(')[0]}), 밝고 환한 분위기, 자막 없이.")
             else:
                 _t = (lambda sl_: f"c{seq_no(data, sl_):02d}") if data.get("naming") == "seq" else (lambda sl_: f"컷 {sl_} 장면")
