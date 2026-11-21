@@ -648,7 +648,8 @@ TOPIC_FRAMES = [
 def suggest_topics(cfg, channel, keyword, avoid=None):
     """서로 다른 이야기 틀(감동·사이다·진상·화해·반성·오해·보답·세대)을 하나씩 정해 주어 비슷비슷하지 않게"""
     import random
-    frames = random.sample(TOPIC_FRAMES, 6)
+    pool = [tuple(x) for x in channel.get("topic_frames") or []] or TOPIC_FRAMES   # 채널 전용 주제 틀이 있으면 그것으로
+    frames = random.sample(pool, min(6, len(pool)))
     frame_txt = "\n".join(f"{k + 1}번: [{a}] {b} — 결말: {c}" for k, (a, b, c) in enumerate(frames))
     avoid_txt = ("\n[이미 만든 이야기 — 이것과 겹치는 소재·관계·반전 금지]\n" + "\n".join("- " + t for t in (avoid or [])[:40])) if avoid else ""
     prompt = f"""당신은 조회수가 잘 나오는 한국 유튜브 스토리 작가입니다.
@@ -661,6 +662,7 @@ def suggest_topics(cfg, channel, keyword, avoid=None):
 이 키워드로 이야기 주제 6개를 만드세요. 6개는 아래 '이야기 틀'을 하나씩 따라서, 서로 완전히 다르게:
 {frame_txt}
 
+{channel.get("topic_note") or ""}
 [겹치지 않게 — 꼭 지킬 것]
 - 주인공 관계를 6개 모두 다르게(예: 시어머니-며느리, 아버지-아들, 손님-사장, 이웃, 옛 친구, 부부, 손주-할머니, 직원-사장…).
 - 장소도 다르게(집 식탁, 동네 식당, 시장, 명절 시댁, 병문안이 아닌 일상 장소 등).

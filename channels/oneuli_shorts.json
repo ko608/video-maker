@@ -21,5 +21,58 @@
     "pinned_tail": "띠를 남겨 주시면 오늘이 선녀가 한 줄 운세를 드려요 💬"
   },
   "visual_style": "Bright clean daylight, evenly lit, no dim or moody lighting, no deep shadows; the people are crisp and sharp with good contrast, no glow, no haze, no overexposed background. Tight face close-ups: the face fills most of the frame (forehead to chin about 55-65 percent of the frame height), eyes sharp and in focus with visible catchlights so the emotion can be read in the pupils; the hanbok fortune teller speaks alone to the camera with detailed facial expressions and big expressive hand gestures; story characters appear one at a time. Korean weekend TV drama look (not a cinematic movie look): character-focused framing — two-shots of people talking, over-the-shoulder shots, reaction close-ups, food close-ups; even soft daylight, natural colors. Characters always look neat and well-groomed with clean tidy clothes and clean faces, even in old-days or poor settings (the place may be old, the people are tidy). bright exposure and high-key lighting, plenty of soft daylight, clear and vivid but natural colors, no dark or gloomy look. The setting, buildings, rooms, props and clothes must match the story's era and place exactly as described in the scene (e.g. an old shabby thatched-roof tavern in the mountains stays humble and old-fashioned; a modern apartment stays modern) — brightness only, never make places richer or more modern than described. vertical 9:16, single scene in one frame (no collage, no panels, no split screen), no text, no subtitles, no watermark",
-  "fixed_cuts": true
+  "fixed_cuts": true,
+  "topic_frames": [
+    [
+      "띠 운세",
+      "2027년 이 띠가 조심할 달·잡을 기회",
+      "'○띠는 ○월을 꼭 기억하세요'로 끝남"
+    ],
+    [
+      "오행 성격",
+      "물·불·나무·쇠·흙이 많은 사주의 숨은 성격",
+      "'혹시 내 얘기?' 싶게 끝남"
+    ],
+    [
+      "궁합",
+      "잘 맞는 띠·안 맞는 띠, 부딪힐 때 푸는 법",
+      "바로 써먹는 한마디로 끝남"
+    ],
+    [
+      "재물운",
+      "돈이 새는 사주·모이는 사주의 습관",
+      "오늘 당장 할 일 하나로 끝남"
+    ],
+    [
+      "대운",
+      "10년마다 바뀌는 대운, 바뀌는 해에 생기는 일",
+      "'지금 내 대운은?' 궁금하게 끝남"
+    ],
+    [
+      "가족 사연",
+      "가족 갈등을 사주로 풀어 보니 오해였던 이야기",
+      "이해와 화해의 한마디로 끝남"
+    ],
+    [
+      "일간",
+      "태어난 날 글자(일간)로 보는 나 — 갑목·병화 같은 10가지 중 하나",
+      "'당신은 어떤 글자인가요?'로 끝남"
+    ],
+    [
+      "연애운",
+      "인연이 들어오는 때, 연애가 꼬이는 사주의 특징",
+      "따뜻한 조언으로 끝남"
+    ],
+    [
+      "이름·숫자",
+      "이름 글자·좋은 숫자·좋은 색으로 기운 채우기",
+      "바로 해 볼 개운법 하나로 끝남"
+    ],
+    [
+      "계절·절기",
+      "입춘·동지 같은 절기에 운이 바뀌는 이유",
+      "이번 절기에 할 일로 끝남"
+    ]
+  ],
+  "topic_note": "[이 채널 주제 — 우선 적용] 오늘이 선녀 한 사람이 24초 안에 빠르게 들려주는 '사주 정보' 주제로 만든다. 아래 '겹치지 않게'의 주인공 관계·장소 규칙은 사연 주제일 때만 적용. title은 첫 마디로 바로 쓸 수 있게 궁금증이 생기는 말로, twist는 '사주로 보니 이유가 이것'인 한 줄, ending은 마지막 조언 한 줄."
 }
