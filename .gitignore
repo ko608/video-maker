@@ -5,3 +5,4 @@ music/*
 __pycache__/
 *.pyc
 voice_samples/
+channels/*_ref.png

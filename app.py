@@ -390,7 +390,7 @@ if page == "① 분석·대본":
     if follow:
         CASTS = {
             "원본 출연자 그대로 (얼굴·옷만 새로)": "",
-            "오늘이 선녀로 — 원본 주인공(혼자 말하는 영상이면 그 한 사람)을 오늘이 선녀로": "원본의 주인공(혼자 카메라 보고 말하는 영상이면 그 한 사람, 상황극이면 상담·조언·해결을 맡는 사람)을 '오늘이 선녀'로 바꾼다 — 30대 후반의 단정하고 품위 있는 평범한 한국 여성(연예인 같지 않은 일반인 얼굴), 연분홍 저고리에 진분홍 치마 한복, 단정하게 쪽진 머리, 차분하고 따뜻한 눈빛과 또렷한 말투. 사주·운세 이야기로 상황을 풀어 준다. 나머지 인물은 원본 역할 그대로 얼굴·옷만 새로.",
+            "오늘이 선녀로 — 원본 주인공(혼자 말하는 영상이면 그 한 사람)을 오늘이 선녀로": "원본의 주인공(혼자 카메라 보고 말하는 영상이면 그 한 사람, 상황극이면 상담·조언·해결을 맡는 사람)을 '오늘이 선녀'로 바꾼다 — 30대 후반의 평범하고 단정한 한국 여성(연예인 같지 않은 일반인 얼굴), 갸름한 얼굴, 가운데 가르마에 낮게 쪽진 머리와 금 비녀, 잔꽃무늬 자주색(와인색) 비단 저고리에 흰 동정·흰 끝동, 같은 자주색 치마, 따뜻한 눈빛과 또렷한 말투. 사주·운세 이야기로 상황을 풀어 준다. 나머지 인물은 원본 역할 그대로 얼굴·옷만 새로.",
             "직접 쓰기": None,
         }
         new_topic = st.text_input("📝 바꿀 주제 (형식은 원본 그대로, 내용만 이 주제로)", key="follow_topic",
@@ -534,6 +534,11 @@ if page == "② 재료 만들기":
                     "**방법 B — 플로우(무료)**: 아래 문구를 플로우에 넣어 만든 뒤, 컷마다 파일을 올리세요.")
         # ---- 👤 등장인물 기준 그림: 모든 컷에서 같은 사람 나오게 ----
         ref = p / "재료" / "인물기준.png"
+        _chref = chs_by_id.get(data.get("channel"), {}).get("ref_image")
+        _chref_p = (config.CHANNELS / _chref) if _chref else None
+        if _chref_p and _chref_p.exists() and not ref.exists():   # 채널에 고정 인물 그림이 있으면 자동으로 씀
+            ref.parent.mkdir(parents=True, exist_ok=True)
+            ref.write_bytes(_chref_p.read_bytes())
         st.markdown("### 👤 등장인물 기준 그림 (모든 컷 같은 사람)")
         rc1, rc2 = st.columns([3, 2])
         rc1.caption("주인공들이 한 화면에 나란히 선 그림 1장. 자동 그림은 이걸 보고 같은 얼굴로 그리고, "
@@ -558,6 +563,9 @@ if page == "② 재료 만들기":
             show_small(rc2, ref, caption="인물 기준 그림")
             rc2.download_button("⬇ 기준 그림 받기 (플로우에 넣기)", ref.read_bytes(), file_name="인물기준.png",
                                 mime="image/png", key="dl_ref")
+            if _chref_p and rc2.button("📌 이 그림을 채널 고정 인물로 저장 (다음 영상부터 자동)", key="pin_ref"):
+                _chref_p.write_bytes(ref.read_bytes())
+                st.success("저장했어요. 이 채널로 새로 만드는 영상은 이 인물 그림을 자동으로 씁니다.")
         st.divider()
         colA, colB = st.columns(2)
         mode_video = colA.checkbox("대사 영상도 자동으로 (구글 Omni — 유료, 1컷 수백 원)", value=False)
