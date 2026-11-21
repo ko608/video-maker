@@ -1104,6 +1104,7 @@ if page == "② 재료 만들기":
                         + ("두 사람만 차례로 말하고(동시에 말하지 않음) 다른 사람은 말하지 않음. 어깨 너머 투샷으로 두 얼굴이 가깝고 또렷하게. "
                            if (c.get('line2') or '').strip() else
                            "다른 사람은 말하지 않음. 말하는 사람 얼굴을 아주 가깝게(얼굴이 화면을 거의 채우고 눈동자까지 또렷), 상대는 뒤에 흐리게. ") +
+                        ("말은 빠르고 경쾌하게, 말끝(~요)을 늘이지 말고 짧게 딱 끊어서. " if "brisk pace" in c.get("visual", "") else "") +
                         "표정은 눈썹·눈빛·입꼬리까지 세밀하게 바뀌고, 손짓·몸짓은 크게(손바닥 펴 보이기, 몸을 앞으로 기울이기, 놀라 입 가리기). "
                         f"시작 그림과 같은 그림체({art_style(cfg)[1].split('(')[0]}), 밝고 환한 분위기, 자막 없이.")
             else:
@@ -1271,6 +1272,13 @@ if page == "③ 완성 영상":
         st.caption(f"💰 이번에 드는 비용: 나레이션 목소리 {n_voice}개 (약 {n_voice * 5}~{n_voice * 15}원)"
                    + (" + 썸네일 그림 약 100원" if auto_thumb and not (p / "재료" / "썸네일전용.png").exists() else "")
                    + " — 이미 만든 목소리는 다시 만들지 않아요. 영상 편집 자체는 0원.")
+        talk_speed = 1.0
+        if any(c["kind"] == "video" for c in data["cuts"]):
+            _def = float({c_["id"]: c_ for c_ in channels().values()}.get(data.get("channel"), {}).get("talk_speed", 1.0))
+            _opts = [1.0, 1.1, 1.15, 1.2, 1.25, 1.3]
+            talk_speed = st.select_slider("🗣 대사 영상 말 빠르기 (늘어지는 말끝을 빠르게 — 목소리 높낮이는 그대로)", options=_opts,
+                                          value=_def if _def in _opts else 1.0, format_func=lambda v: "보통" if v == 1.0 else f"{v}배",
+                                          key=f"talk_speed_{p.name}")
         if st.button("🎬 영상 만들기", type="primary", disabled=bool(missing), width="stretch"):
             log = Log()
             try:
@@ -1314,7 +1322,8 @@ if page == "③ 완성 영상":
                             wav = p / "work" / f"v_{cfg.get('tts_voice','Kore')}_{no:02d}.wav"
                             (p / "work").mkdir(exist_ok=True)
                             audio = wav if wav.exists() else None
-                    cuts.append(dict(media=media, audio=audio, text=ai.sub_text(c) if c["kind"] == "video" else c.get("narration", ""),
+                    cuts.append(dict(media=media, audio=audio, speed=talk_speed if c["kind"] == "video" else 1.0,
+                                     text=ai.sub_text(c) if c["kind"] == "video" else c.get("narration", ""),
                                      extras=[str(x) for x in extra_files(p, no)] if c["kind"] == "image" else []))
                 assemble.set_format(fmt)
                 if any(c["kind"] == "video" for c in data["cuts"]):

@@ -146,8 +146,10 @@ def build_segment(work: Path, idx, cut, cfg, log=print):
     is_video = media.suffix.lower() in (".mp4", ".mov", ".webm", ".mkv")
     audio = Path(cut["audio"]) if cut.get("audio") else None
 
+    sp = float(cut.get("speed") or 1.0) if is_video else 1.0   # 대사 영상 말 빠르기 (영상·목소리 함께, 음높이 그대로)
     if is_video:
         vdur, has_a = media_info(media)
+        vdur = vdur / sp
         dur = vdur
         if audio:
             dur = max(vdur, wav_seconds(audio) + 0.3)
@@ -168,7 +170,7 @@ def build_segment(work: Path, idx, cut, cfg, log=print):
     args, filt = [], []
     if is_video:
         args += ["-i", str(media)]
-        filt.append(f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS},setsar=1,"
+        filt.append(f"[0:v]{f'setpts=PTS/{sp},' if sp != 1.0 else ''}scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS},setsar=1,"
                     f"tpad=stop_mode=clone:stop_duration={max(0, dur - vdur):.2f}{_bright(cfg)}[v0]")
     else:
         # 그림 컷: 그림이 여러 장이면 나눠서 번갈아 보여 줌 (5~6초마다 화면 바뀜) + 천천히 움직임
@@ -206,7 +208,7 @@ def build_segment(work: Path, idx, cut, cfg, log=print):
                      "areverse,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.05,areverse,"
                      "afade=t=in:d=0.03,apad[a0x]")
     elif is_video and media_info(media)[1]:
-        audio_src = "[0:a]aresample=44100,apad[a0x]"
+        audio_src = f"[0:a]{f'atempo={sp},' if sp != 1.0 else ''}aresample=44100,apad[a0x]"
     else:
         args += ["-f", "lavfi", "-t", f"{dur:.2f}", "-i", "anullsrc=r=44100:cl=stereo"]; a_idx = n_in; n_in += 1
         audio_src = f"[{a_idx}:a]anull[a0x]"
