@@ -339,6 +339,19 @@ if page == "① 분석·대본":
     chs = channels()
     ch_name = st.selectbox("우리 채널", list(chs))
     ch = dict(chs[ch_name])
+    if str(ch.get("id", "")).startswith("oneuli"):   # 오늘이 선녀: 올릴 곳에 따라 마지막 멘트만 바꿈
+        dest = st.radio("📍 어디에 올릴 영상인가요? (마지막 멘트가 달라져요)",
+                        ["유튜브·인스타 — 사주자판기 사이트로", "네이버 클립 — 스마트스토어 상품으로"], horizontal=True, key="oneuli_dest")
+        if dest.startswith("네이버"):
+            end = ("[마지막 멘트 — 네이버 클립용, 위 규칙보다 우선] 마지막 컷은 '사주자판기'라는 말을 쓰지 않고 "
+                   "'더 자세한 내 풀이는 아래 연결된 상품에서 받아 보세요.'로 끝낸다. 사이트 주소·다른 앱 이름도 말하지 않는다.")
+            ch["rules"] = [r.replace("'내 사주가 궁금하면 사주자판기에서 확인해 보세요'", "'더 자세한 내 풀이는 아래 연결된 상품에서 받아 보세요'")
+                            .replace("사주자판기에서 확인해 보세요.", "더 자세한 내 풀이는 아래 연결된 상품에서 받아 보세요.") for r in ch["rules"]] + [end]
+            up = dict(ch.get("upload", {}))   # 설명·태그에서도 사이트 주소·사주자판기 빼고 스토어 상품 안내로
+            up["base_tags"] = up.get("base_tags", "").replace("사주자판기,", "")
+            up["description_tail"] = "더 자세한 내 사주 풀이는 아래 연결된 상품(한아름커머스)에서 받아 보세요."
+            up.pop("pinned_tail", None)
+            ch["upload"] = up
     if ch.get("format") == "longform":
         mins = st.select_slider("⏱ 영상 길이 (분)", options=[5, 8, 10, 15, 20, 25, 30], value=10,
                                 help="길수록 그림·목소리 개수가 늘어 비용과 만드는 시간이 늘어요")
