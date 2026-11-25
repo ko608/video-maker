@@ -33,7 +33,7 @@ DEFAULTS = {
     "font_path": _default_font(),
     "music_volume": 0.35,   # 배경음악 음량 (0~1). 나레이션이 나올 땐 자동으로 더 작아집니다
     "subtitle_size": 76,
-    "subtitle_y": 0.55,     # 자막 높이 (0=맨 위, 1=맨 아래). 쇼츠는 화면 중간쯤
+    "subtitle_y": 0.62,     # 자막 높이 (0=맨 위, 1=맨 아래). 쇼츠는 화면 중간보다 조금 아래(아래 1/3은 유튜브 글에 가려져서 0.66 넘지 않게)
     "video_seconds": 8,
     "image_size": "2K",
     "brighten": 2,          # 완성 영상 밝기 보정 (0~10)
@@ -51,6 +51,8 @@ def load():
     for k in ("gemini_text_model", "gemini_image_model", "gemini_tts_model"):
         if str(data.get(k, "")).startswith("gemini-2.5") or data.get(k) == "gemini-flash-latest":
             data[k] = DEFAULTS[k]
+    if float(data.get("subtitle_y", 0.62)) == 0.55 and not data.get("_suby_v2"):   # 예전 기본값 0.55 → 0.62 (얼굴·턱을 가려서 조금 아래로)
+        data["subtitle_y"] = 0.62
     if data.get("brighten") == 5 and not data.get("_brighten_v2"):   # 예전 기본값 5 → 2 (너무 뿌옇게 나와서)
         data["brighten"] = 2
     return data

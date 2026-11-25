@@ -57,8 +57,18 @@ def wav_seconds(path):
 
 
 # ---------------- 자막 ----------------
+# 'ㄹ', 'ㄱㅋ' 같은 낱자모는 자막에서 깨진 글자처럼 보여서 이름으로 바꿔 씀 (리을, 기역·키읔)
+JAMO_NAME = {"ㄱ": "기역", "ㄴ": "니은", "ㄷ": "디귿", "ㄹ": "리을", "ㅁ": "미음", "ㅂ": "비읍", "ㅅ": "시옷", "ㅇ": "이응",
+             "ㅈ": "지읒", "ㅊ": "치읓", "ㅋ": "키읔", "ㅌ": "티읕", "ㅍ": "피읖", "ㅎ": "히읗"}
+
+def fix_jamo(text):
+    return re.sub(r"[ㄱ-ㅎ]+", lambda m: "·".join(JAMO_NAME.get(c, c) for c in m.group(0)), text or "")
+
+
 def split_chunks(text, limit=13):
-    """자막을 한 줄 13자 안팎으로 자름 (띄어쓰기 기준). 줄바꿈(주고받는 대사)은 꼭 새 자막으로."""
+    """자막을 한 줄 13자 안팎으로 자름 (띄어쓰기 기준). 줄바꿈(주고받는 대사)은 꼭 새 자막으로.
+    '봐요', '보세요'처럼 짧은 끝말이 혼자 남지 않게 앞 자막과 고르게 나눔."""
+    text = fix_jamo(text)
     if "\n" in (text or "").strip():
         return [c for part in text.strip().split("\n") for c in split_chunks(part, limit)]
     text = re.sub(r"\s+", " ", (text or "").strip())
@@ -78,6 +88,17 @@ def split_chunks(text, limit=13):
             out.append(cur); cur = ""
     if cur:
         out.append(cur)
+    # 짧은 꼬리(5자 이하)가 혼자 떨어지면 앞 자막과 합쳐서 반씩 다시 나눔 → '봐요' 단독 자막 방지
+    if len(out) >= 2 and len(out[-1].replace(" ", "")) <= 5 and not re.search(r"[.?!…]$", out[-2]):
+        words = (out[-2] + " " + out.pop()).split(" ")
+        if len(words) >= 2:
+            tot = sum(len(w) for w in words); acc, k = 0, 1
+            for i, w in enumerate(words[:-1]):
+                acc += len(w)
+                if acc >= tot / 2: k = i + 1; break
+            out[-1:] = [" ".join(words[:k]), " ".join(words[k:])] if k < len(words) else [" ".join(words)]
+        else:
+            out[-1] = " ".join(words)
     return out
 
 
