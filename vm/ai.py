@@ -144,15 +144,32 @@ FOLLOW_PROMPT = """당신은 한국 유튜브 쇼츠 상황극 분석가입니�
 """
 
 
+def youtube_watch_url(url):
+    """쇼츠·짧은 주소·모바일 주소를 구글이 읽을 수 있는 기본 주소(watch?v=)로 바꿈. 유튜브가 아니면 None"""
+    import re
+    u = (url or "").strip()
+    m = re.search(r"(?:youtube\.com/(?:shorts/|watch\?(?:.*&)?v=|embed/|live/|v/)|youtu\.be/)([A-Za-z0-9_-]{11})", u)
+    return f"https://www.youtube.com/watch?v={m.group(1)}" if m else None
+
+
 def analyze_youtube(cfg, url, extra="", follow=False):
     from google.genai import types
     client = _gclient(cfg)
+    yt = youtube_watch_url(url)
+    if not yt:
+        raise ValueError("유튜브 영상 주소만 분석할 수 있어요. (인스타·네이버 클립·틱톡 주소는 안 돼요 — 그 영상은 주제만 아래 칸에 적어 주세요)")
     contents = types.Content(parts=[
-        types.Part(file_data=types.FileData(file_uri=url.strip())),
+        types.Part(file_data=types.FileData(file_uri=yt)),
         types.Part(text=(FOLLOW_PROMPT if follow else ANALYZE_PROMPT) + (f"\n참고 메모: {extra}" if extra else "")),
     ])
-    r = _with_retry(lambda m: client.models.generate_content(model=m, contents=contents),
-                    [cfg["gemini_text_model"]] + FALLBACK_TEXT)
+    try:
+        r = _with_retry(lambda m: client.models.generate_content(model=m, contents=contents),
+                        [cfg["gemini_text_model"]] + FALLBACK_TEXT)
+    except Exception as e:
+        if "Cannot fetch content" in str(e) or "INVALID_ARGUMENT" in str(e):
+            raise ValueError("이 유튜브 영상은 구글이 열어 볼 수 없어요. 비공개·일부공개·연령 제한·회원 전용 영상이거나 막 올라온 영상일 수 있어요. "
+                             "다른 공개 영상 주소를 넣거나, 주소는 비우고 아래 '주제·메모' 칸에 내용을 적어 주세요.") from e
+        raise
     return (r.text or "").strip()
 
 
