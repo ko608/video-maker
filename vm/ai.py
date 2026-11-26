@@ -152,14 +152,35 @@ def youtube_watch_url(url):
     return f"https://www.youtube.com/watch?v={m.group(1)}" if m else None
 
 
-def analyze_youtube(cfg, url, extra="", follow=False):
+def _upload_video(client, path):
+    """내 컴퓨터의 영상 파일을 구글에 올리고, 읽을 준비가 될 때까지 기다림"""
+    import time as _t
+    f = client.files.upload(file=str(path))
+    for _ in range(90):   # 최대 3분
+        st_ = str(getattr(f, "state", "") or "")
+        if "ACTIVE" in st_:
+            return f
+        if "FAILED" in st_:
+            raise RuntimeError("영상 파일을 구글이 읽지 못했어요. mp4 파일로 다시 올려 주세요.")
+        _t.sleep(2)
+        f = client.files.get(name=f.name)
+    raise RuntimeError("영상 파일 준비가 너무 오래 걸려요. 잠시 뒤 다시 해 주세요.")
+
+
+def analyze_youtube(cfg, url, extra="", follow=False, video_path=None):
     from google.genai import types
     client = _gclient(cfg)
-    yt = youtube_watch_url(url)
-    if not yt:
-        raise ValueError("유튜브 영상 주소만 분석할 수 있어요. (인스타·네이버 클립·틱톡 주소는 안 돼요 — 그 영상은 주제만 아래 칸에 적어 주세요)")
+    if video_path:   # 인스타 릴스·네이버 클립 등은 영상 파일로 받아서 분석
+        vf = _upload_video(client, video_path)
+        vpart = types.Part(file_data=types.FileData(file_uri=vf.uri, mime_type=vf.mime_type or "video/mp4"))
+    else:
+        yt = youtube_watch_url(url)
+        if not yt:
+            raise ValueError("주소로는 유튜브 영상만 분석할 수 있어요. 인스타 릴스·네이버 클립·틱톡은 영상을 휴대폰에 저장한 뒤 "
+                             "'또는 영상 파일 올리기' 칸에 mp4 파일을 올려 주세요.")
+        vpart = types.Part(file_data=types.FileData(file_uri=yt))
     contents = types.Content(parts=[
-        types.Part(file_data=types.FileData(file_uri=yt)),
+        vpart,
         types.Part(text=(FOLLOW_PROMPT if follow else ANALYZE_PROMPT) + (f"\n참고 메모: {extra}" if extra else "")),
     ])
     try:

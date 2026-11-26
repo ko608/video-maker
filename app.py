@@ -394,6 +394,9 @@ if page == "① 분석·대본":
                 f"위 규칙의 '6컷'·'4컷 반전'은 무시하고, 큰 반전은 {twist}컷 무렵, 작은 반전·의문은 3컷마다 넣는다. "
                 "마지막 컷 나레이션 마무리 문장 규칙은 그대로 지킨다."]
     url = st.text_input("잘 되는 영상 유튜브 링크 (없으면 비워 두고 아래 주제만 써도 됩니다)")
+    vfile = st.file_uploader("📱 또는 영상 파일 올리기 — 인스타 릴스·네이버 클립·틱톡은 휴대폰에 저장한 mp4를 여기에",
+                             type=["mp4", "mov", "m4v", "webm"], key="ref_video")
+    has_src = bool(url.strip()) or vfile is not None
     use = st.radio("🔗 링크 영상을 어떻게 쓸까요?",
                    ["🎭 따라 만들기 — 원본 형식(사람 수·장면 수·길이) 그대로, 주제만 바꾸기",
                     "🧩 참고만 — 구조·리듬만 빌려서 새 이야기"],
@@ -444,13 +447,18 @@ if page == "① 분석·대본":
         log = Log()
         try:
             analysis = ""
-            if url.strip():
+            if has_src:
                 log("영상 분석 중… (1~2분)" if not follow else "영상 장면 설계도 뽑는 중… (1~2분)")
-                analysis = ai.analyze_youtube(cfg, url, topic, follow=follow)
+                vpath = None
+                if vfile is not None:
+                    import tempfile
+                    vpath = Path(tempfile.gettempdir()) / ("ref_" + re.sub(r"[^A-Za-z0-9._-]", "_", vfile.name or "video.mp4"))
+                    vpath.write_bytes(vfile.getvalue())
+                analysis = ai.analyze_youtube(cfg, url, topic, follow=follow, video_path=vpath)
                 st.session_state["analysis"] = analysis
                 st.session_state["analysis_follow"] = follow
-            log("우리식 대본 쓰는 중… (1분 안팎)" if not (follow and url.strip()) else "같은 흐름으로 인물·대사 바꿔 쓰는 중… (1분 안팎)")
-            st.session_state["draft"] = ai.write_script(cfg, ch, analysis, wtopic, follow=follow and bool(url.strip()), cast=cast)
+            log("우리식 대본 쓰는 중… (1분 안팎)" if not (follow and has_src) else "같은 흐름으로 인물·대사 바꿔 쓰는 중… (1분 안팎)")
+            st.session_state["draft"] = ai.write_script(cfg, ch, analysis, wtopic, follow=follow and has_src, cast=cast)
             st.session_state["draft_channel"] = ch["id"]
             log("완료! 아래에서 확인하고 고친 뒤 저장하세요.")
         except Exception as e:
