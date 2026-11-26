@@ -9,7 +9,7 @@ from vm.soften import soften
 _T0 = time.time()
 
 sys.path.insert(0, str(Path(__file__).parent))
-from vm import config, ai, assemble  # noqa: E402
+from vm import config, ai, assemble, yt  # noqa: E402
 
 st.set_page_config(page_title="영상 자판기", page_icon="🎬", layout="wide")
 cfg = config.load()
@@ -154,6 +154,13 @@ def channels():
         c = json.loads(f.read_text(encoding="utf-8"))
         out[c["name"]] = c
     return out
+
+
+YT_KEY_HELP = """1. **console.cloud.google.com** 접속 (구글 AI Studio 키를 만든 그 구글 계정)
+2. 위쪽 프로젝트 고르기 → AI Studio 키를 만든 프로젝트 선택
+3. 검색창에 **YouTube Data API v3** → **사용(Enable)** 누르기
+4. 그러면 구글 키로 바로 돼요. 안 되면 **API 및 서비스 → 사용자 인증 정보 → API 키 만들기**로 새 키를 만들어 위 칸에 넣으세요.
+- 무료이고 하루 1만 점까지 써요 (터진 영상 찾기 한 번에 약 300~500점)."""
 
 
 def projects():
@@ -329,7 +336,7 @@ class Log:
 
 
 # 탭 대신 고르기 버튼 — 고른 화면만 그려서 가볍게 (st.tabs는 네 화면을 매번 다 그림)
-PAGES = ["① 분석·대본", "② 재료 만들기", "③ 완성 영상", "⚙️ 설정"]
+PAGES = ["① 분석·대본", "② 재료 만들기", "③ 완성 영상", "📈 터진 영상·이탈", "⚙️ 설정"]
 page = st.radio("화면", PAGES, horizontal=True, label_visibility="collapsed", key="page")
 st.divider()
 _T1 = time.time()
@@ -393,7 +400,7 @@ if page == "① 분석·대본":
                 f"[이번 길이 우선 적용] 전체 {n}컷: 홀수 컷(1·3·5…)은 대사 영상(모두 8초, 30~42자), 짝수 컷은 이미지 + 나레이션(90~130자). "
                 f"위 규칙의 '6컷'·'4컷 반전'은 무시하고, 큰 반전은 {twist}컷 무렵, 작은 반전·의문은 3컷마다 넣는다. "
                 "마지막 컷 나레이션 마무리 문장 규칙은 그대로 지킨다."]
-    url = st.text_input("잘 되는 영상 유튜브 링크 (없으면 비워 두고 아래 주제만 써도 됩니다)")
+    url = st.text_input("잘 되는 영상 유튜브 링크 (없으면 비워 두고 아래 주제만 써도 됩니다)", key="ref_url")
     vfile = st.file_uploader("📱 또는 영상 파일 올리기 — 인스타 릴스·네이버 클립·틱톡은 휴대폰에 저장한 mp4를 여기에",
                              type=["mp4", "mov", "m4v", "webm"], key="ref_video")
     has_src = bool(url.strip()) or vfile is not None
@@ -1362,6 +1369,8 @@ if page == "③ 완성 영상":
                     cfg2.update(subtitle_y=0.86, subtitle_size=58, subtitle_chars=24)
                 durs = []
                 final = assemble.assemble(p, cuts, cfg2, music=music, log=log, durs=durs)
+                if len(durs) == len(data["cuts"]):   # 장면별 길이 기록 → 나중에 '이탈 분석'에서 몇 번 장면에서 나갔는지 보여 줌
+                    data["durs"] = [round(x, 2) for x in durs]; save_script(p, data)
                 chapters_txt = ""
                 if fmt == "longform":
                     t_, rows = 0.0, []
@@ -1400,12 +1409,143 @@ if page == "③ 완성 영상":
             if b.button("📂 완성 폴더 열기"):
                 open_folder(p)
 
+
+# ================= 📈 터진 영상·이탈 =================
+def _go_follow(u):
+    st.session_state["ref_url"] = u
+    st.session_state["page"] = "① 분석·대본"
+
+if page == "📈 터진 영상·이탈":
+    mode_ = st.radio("무엇을 볼까요?", ["🔥 터진 영상 찾기 (내 분야에서 평소보다 터진 영상)", "📉 이탈 분석 (내 영상 어디서 나갔나)"],
+                     horizontal=True, key="yt_mode")
+    if mode_.startswith("🔥"):
+        st.caption("구독자 많은 채널이 아니라 **그 채널 평소 조회수(최근 영상 중앙값)보다 몇 배 나왔는지**로 줄 세워요. "
+                   "작은 채널이 터뜨린 영상이 보여서 따라 할 공식 찾기에 좋아요. 한 번 찾을 때 유튜브 점수 약 300~500점 (하루 1만 점 무료).")
+        chs = channels()
+        a, b = st.columns([3, 2])
+        kw = a.text_input("🔎 분야·주제 (짧게)", key="yt_kw", placeholder="예: 시어머니 사연 / 식당 진상 / 띠별 운세 / 건강 사연")
+        ch_name = b.selectbox("우리 채널 (제목 예시를 이 채널에 맞춰요)", list(chs), key="yt_ch")
+        c1, c2, c3 = st.columns(3)
+        months = c1.selectbox("기간", [1, 3, 6], index=1, format_func=lambda m: f"최근 {m}개월", key="yt_months")
+        kind = c2.radio("영상 종류", ["쇼츠", "롱폼 포함 전체"], horizontal=True, key="yt_kind")
+        ratio = c3.selectbox("몇 배 이상", [1.5, 2.0, 3.0, 5.0], index=1, format_func=lambda r: f"평소의 {r:g}배 이상", key="yt_ratio")
+        if st.button("🔥 터진 영상 찾기", type="primary", disabled=not kw.strip()):
+            box = st.empty()
+            try:
+                hits, nv, nc = yt.find_viral(cfg, kw.strip(), months=months, shorts=(kind == "쇼츠"), min_ratio=ratio,
+                                             log=lambda m: box.info(m))
+                box.empty()
+                st.session_state["yt_hits"] = {"kw": kw.strip(), "hits": hits, "nv": nv, "nc": nc, "ch": ch_name}
+                st.session_state.pop("yt_formulas", None)
+            except Exception as e:
+                box.empty(); st.error(f"오류: {e}")
+        res = st.session_state.get("yt_hits")
+        if res:
+            hits = res["hits"]
+            st.markdown(f"**'{res['kw']}'** — 영상 {res['nv']}개 · 채널 {res['nc']}곳을 살펴서 **터진 영상 {len(hits)}개**를 찾았어요.")
+            if not hits:
+                st.warning("기준을 넘은 영상이 없어요. '몇 배 이상'을 낮추거나 기간을 늘려 보세요.")
+            for i, h in enumerate(hits[:30], 1):
+                with st.container(border=True):
+                    x, y = st.columns([1, 4])
+                    if h.get("thumb"):
+                        x.image(h["thumb"], width="stretch")
+                    y.markdown(f"**{i}. {h['title']}**  \n"
+                               f"🔥 **평소의 {h['ratio']:g}배** · 조회수 {h['views']:,}회 (채널 평소 {h['median']:,}회) · "
+                               f"{h['channel']} (구독 {h['subs']:,}) · {h['published']} · {h['secs']}초")
+                    u1, u2 = y.columns(2)
+                    u1.link_button("▶ 유튜브에서 보기", h["url"], width="stretch")
+                    u2.button("🎭 이 영상으로 대본 만들기", key=f"yt_go_{h['id']}", width="stretch",
+                              on_click=_go_follow, args=(h["url"],), help="① 분석·대본 화면의 링크 칸에 넣어 줘요")
+            if hits:
+                if st.button("🧠 제목 공식 묶고 우리 채널용 제목 뽑기 (클로드)"):
+                    try:
+                        with st.spinner("제목 공식 정리 중… (20~40초)"):
+                            ch = channels().get(res["ch"], {})
+                            desc = f"{res['ch']} — " + " ".join(str(r) for r in (ch.get("rules") or [])[:3])[:600]
+                            st.session_state["yt_formulas"] = yt.name_formulas(cfg, res["kw"], hits, desc)
+                    except Exception as e:
+                        st.error(f"오류: {e}")
+                f = st.session_state.get("yt_formulas")
+                if f:
+                    st.subheader("📚 제목 공식")
+                    for fm in f.get("formulas", []):
+                        st.markdown(f"- **{fm.get('name','')}** ({', '.join(str(n) for n in fm.get('nos', []))}번) — {fm.get('common','')}")
+                    st.subheader("✅ 우리 채널에 쓸 공식 3개")
+                    for pk in f.get("picks", []):
+                        st.markdown(f"**{pk.get('name','')}** — {pk.get('why','')}")
+                        for t in pk.get("titles", []):
+                            st.code(t, language=None)
+                    st.caption("※ 공식 이름은 제목 문구로 나눈 것일 뿐, 그게 터진 이유라는 뜻은 아니에요.")
+    else:
+        st.markdown("**시청 지속 파일 받는 법**: 유튜브 스튜디오 → 영상 선택 → **분석** → **고급 모드** → "
+                    "'시청 지속' 관련 지표 → 오른쪽 위 **내보내기 → CSV**. (메뉴 이름은 조금 바뀔 수 있어요)")
+        up = st.file_uploader("📄 시청 지속 CSV 올리기", type=["csv"], key="ret_csv")
+        plist = projects()
+        opts = ["(대본 없이 숫자만 보기)"] + [x.name for x in plist]
+        pj = st.selectbox("이 영상의 프로젝트 (고르면 '몇 번 장면에서 나갔는지'까지 봐요)", opts, key="ret_proj")
+        secs = st.number_input("영상 길이(초) — 프로젝트를 고르면 자동", min_value=0, value=0, step=1, key="ret_secs")
+        if up is not None and st.button("📉 이탈 분석하기", type="primary"):
+            try:
+                pts = yt.read_retention(up.getvalue())
+                data = load_script(config.PROJECTS / pj) if pj != opts[0] else None
+                total = sum(data.get("durs") or []) if data else 0
+                total = total or secs or None
+                summ = yt.retention_summary(pts, total)
+                script_text = ""
+                if data:
+                    t_ = 0.0
+                    rows = []
+                    for c, d_ in zip(data.get("cuts", []), data.get("durs") or [None] * len(data.get("cuts", []))):
+                        tm = f"{int(t_ // 60)}:{int(t_ % 60):02d}" if d_ else "?"
+                        rows.append(f"{c.get('no')}번 [{tm}] {ai.full_line(c) or c.get('text', '')}")
+                        t_ += d_ or 0
+                    script_text = "\n".join(rows)
+                    for cl in summ["cliffs"]:
+                        c = yt.cut_at(data, cl["from_pct"])
+                        if c:
+                            cl["scene"] = f"{c.get('no')}번 장면: {(ai.full_line(c) or c.get('text', ''))[:60]}"
+                st.session_state["ret_res"] = {"pts": pts, "summ": summ, "script": script_text, "has_durs": bool(data and data.get("durs"))}
+                st.session_state.pop("ret_adv", None)
+            except Exception as e:
+                st.error(f"오류: {e}")
+        rr = st.session_state.get("ret_res")
+        if rr:
+            s_ = rr["summ"]
+            st.line_chart({"남은 시청자 %": {round(p, 1): v for p, v in rr["pts"]}}, x_label="영상 위치 (%)", y_label="남은 시청자 %")
+            m1, m2, m3 = st.columns(3)
+            m1.metric(s_["hook_label"], f"{s_['after_hook']}%")
+            m2.metric("절반 지점", f"{s_['half']}%")
+            m3.metric("끝까지", f"{s_['end']}%")
+            if s_["cliffs"]:
+                st.markdown("**📉 크게 빠진 곳**")
+                for cl in s_["cliffs"]:
+                    st.markdown(f"- **{cl['time']}** : {cl['before']}% → {cl['after']}% (−{cl['drop']}%)"
+                                + (f"  · {cl['scene']}" if cl.get("scene") else ""))
+            if not rr["has_durs"] and rr["script"]:
+                st.caption("이 프로젝트는 장면별 시간 기록이 없어요 (예전에 만든 영상). ③ 완성 영상을 다시 만들면 다음부터 장면 번호까지 나와요.")
+            if st.button("🧠 왜 나갔는지 · 다음에 고칠 점 (클로드)"):
+                try:
+                    with st.spinner("분석 중…"):
+                        st.session_state["ret_adv"] = yt.retention_advice(cfg, s_, rr["script"])
+                except Exception as e:
+                    st.error(f"오류: {e}")
+            adv = st.session_state.get("ret_adv")
+            if adv:
+                st.info(adv.get("verdict", ""))
+                for c in adv.get("cliffs", []):
+                    st.markdown(f"- **{c.get('time','')}** {c.get('scene','')}  \n  왜: {c.get('why','')}  \n  👉 {c.get('fix','')}")
+                st.success(f"다음 영상에서 딱 하나만: {adv.get('one_fix','')}")
+
 # ================= ⚙️ 설정 =================
 if page == "⚙️ 설정":
     st.markdown("키는 이 컴퓨터의 settings.json 에만 저장되고, 인터넷(GitHub)에는 올라가지 않습니다.")
     new = dict(cfg)
     new["google_api_key"] = st.text_input("구글 AI Studio 키", cfg["google_api_key"], type="password")
     new["anthropic_api_key"] = st.text_input("Anthropic(클로드) 키", cfg["anthropic_api_key"], type="password")
+    new["youtube_api_key"] = st.text_input("유튜브 키 (📈 터진 영상 찾기용 · 비우면 구글 키를 그대로 씀)", cfg.get("youtube_api_key", ""), type="password")
+    with st.expander("유튜브 키 만드는 법 (처음 한 번, 무료)"):
+        st.markdown(YT_KEY_HELP)
     with st.expander("모델 이름 (보통은 그대로 두세요)"):
         for k in ["claude_model", "gemini_text_model", "gemini_image_model", "gemini_tts_model", "veo_model"]:
             new[k] = st.text_input(k, cfg[k])
